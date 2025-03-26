@@ -6,15 +6,15 @@ using System.Security.Claims;
 
 namespace School_TV_Show.Controllers
 {
-    [Route("api/follow")]
+    [Route("api/schoolchannelfollow")]
     [ApiController]
     [Authorize(Roles = "User,SchoolOwner,Admin")]
-    public class FollowController : ControllerBase
+    public class SchoolChannelFollowController : ControllerBase
     {
-        private readonly IFollowService _followService;
+        private readonly ISchoolChannelFollowService _followService;
         private readonly ISchoolChannelService _schoolChannelService;
 
-        public FollowController(IFollowService followService, ISchoolChannelService schoolChannelService)
+        public SchoolChannelFollowController(ISchoolChannelFollowService followService, ISchoolChannelService schoolChannelService)
         {
             _followService = followService;
             _schoolChannelService = schoolChannelService;
@@ -72,7 +72,7 @@ namespace School_TV_Show.Controllers
                 return NotFound($"SchoolChannel with ID {schoolChannelId} does not exist.");
             }
 
-            await _followService.AddFollowAsync(new Follow
+            await _followService.AddFollowAsync(new SchoolChannelFollow
             {
                 AccountID = accountId,
                 SchoolChannelID = schoolChannelId
@@ -150,5 +150,35 @@ namespace School_TV_Show.Controllers
 
             return Ok(new { message = "Re-followed successfully", accountId, schoolChannelId });
         }
+
+        #region Get Followed School Channels
+        [HttpGet("followed")]
+        public async Task<IActionResult> GetFollowedSchoolChannels()
+        {
+            var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (accountIdClaim == null || !int.TryParse(accountIdClaim.Value, out int accountId))
+            {
+                return Unauthorized("Invalid token. Account ID not found.");
+            }
+
+            var followedChannels = await _followService.GetFollowedSchoolChannelsAsync(accountId);
+
+            if (followedChannels == null || !followedChannels.Any())
+            {
+                return NotFound(new { message = "You are not following any school channels." });
+            }
+
+            return Ok(followedChannels);
+        }
+        #endregion
+
+        [HttpGet("statistics/all-followed")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllFollowedSchoolChannels()
+        {
+            var followedChannels = await _followService.GetAllFollowedSchoolChannelsAsync();
+            return Ok(followedChannels);
+        }
+
     }
 }

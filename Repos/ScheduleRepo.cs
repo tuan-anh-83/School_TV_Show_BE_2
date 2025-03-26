@@ -34,5 +34,14 @@ namespace Repos
         {
             return  ScheduleDAO.Instance.UpdateScheduleAsync(schedule);
         }
+        public Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime)
+        {
+            return ScheduleDAO.Instance.SearchSchedulesByTimeAsync(startTime, endTime);
+        }
+
+        public Task<IEnumerable<Schedule>> GetActiveSchedulesAsync()
+        {
+            return ScheduleDAO.Instance.GetActiveSchedulesAsync();
+        }
     }
 }

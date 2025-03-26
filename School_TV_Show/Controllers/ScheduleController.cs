@@ -7,200 +7,215 @@ using Services;
 
 namespace School_TV_Show.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class ScheduleController : ControllerBase
     {
         private readonly IScheduleService _scheduleService;
+        private readonly IProgramService _programService;
 
-        public ScheduleController(IScheduleService scheduleService)
+        public ScheduleController(IScheduleService scheduleService, IProgramService programService)
         {
             _scheduleService = scheduleService;
+            _programService = programService;
         }
 
-        // GET: api/schedule/all
-        [Authorize(Roles = "Admin,SchoolOwner,User")]
-        [HttpGet("GetAllSchedules")]
+        [Authorize(Roles = "Admin")]
+        [HttpGet("all")]
         public async Task<IActionResult> GetAllSchedules()
         {
-            try
-            {
-                var schedules = await _scheduleService.GetAllSchedulesAsync();
-                if (schedules == null || !schedules.Any())
-                    return NotFound("No schedules found.");
+            var schedules = await _scheduleService.GetAllSchedulesAsync();
+            if (!schedules.Any())
+                return NotFound(new { message = "No schedules found." });
 
-                var response = schedules.Select(s => new ScheduleResponse
-                {
-                    ScheduleID = s.ScheduleID,
-                    StartTime = s.StartTime,
-                    EndTime = s.EndTime,
-                    Status = s.Status
-                });
-                return Ok(response);
-            }
-            catch (Exception ex)
+            var response = schedules.Select(s => new ScheduleResponse
             {
-                Console.WriteLine($"Error retrieving schedules: {ex.Message}");
-                return StatusCode(500, "Internal server error");
-            }
+                ScheduleID = s.ScheduleID,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                Status = s.Status,
+                Mode = s.Mode,
+                SourceVideoHistoryID = s.SourceVideoHistoryID
+            });
+
+            return Ok(response);
         }
 
-        // GET: api/schedule/active
         [Authorize(Roles = "User,SchoolOwner,Admin")]
-        [HttpGet("GetActiveSchedules")]
+        [HttpGet("active")]
         public async Task<IActionResult> GetActiveSchedules()
         {
-            try
-            {
-                var schedules = await _scheduleService.GetAllSchedulesAsync();
-                if (schedules == null || !schedules.Any())
-                    return NotFound("No schedules found.");
+            var activeSchedules = await _scheduleService.GetActiveSchedulesAsync();
+            if (!activeSchedules.Any())
+                return NotFound(new { message = "No active schedules found." });
 
-                var activeSchedules = schedules.Where(s => s.Status.Equals("Active", StringComparison.OrdinalIgnoreCase));
-                if (!activeSchedules.Any())
-                    return NotFound("No active schedules found.");
-
-                var response = activeSchedules.Select(s => new ScheduleResponse
-                {
-                    ScheduleID = s.ScheduleID,
-                    StartTime = s.StartTime,
-                    EndTime = s.EndTime,
-                    Status = s.Status
-                });
-                return Ok(response);
-            }
-            catch (Exception ex)
+            var response = activeSchedules.Select(s => new ScheduleResponse
             {
-                Console.WriteLine($"Error retrieving active schedules: {ex.Message}");
-                return StatusCode(500, "Internal server error");
-            }
+                ScheduleID = s.ScheduleID,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                Status = s.Status,
+                Mode = s.Mode,
+                SourceVideoHistoryID = s.SourceVideoHistoryID
+            });
+            return Ok(response);
         }
 
-        // GET: api/schedule/{id}
-        [Authorize(Roles = "Admin,SchoolOwner")]
-        [HttpGet("GetScheduleById/{id}")]
+        [Authorize(Roles = "Admin")]
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetScheduleById(int id)
         {
-            try
-            {
-                var schedule = await _scheduleService.GetScheduleByIdAsync(id);
-                if (schedule == null)
-                    return NotFound("Schedule not found");
+            var schedule = await _scheduleService.GetScheduleByIdAsync(id);
+            if (schedule == null)
+                return NotFound(new { message = "Schedule not found." });
 
-                var response = new ScheduleResponse
-                {
-                    ScheduleID = schedule.ScheduleID,
-                    StartTime = schedule.StartTime,
-                    EndTime = schedule.EndTime,
-                    Status = schedule.Status
-                };
-                return Ok(response);
-            }
-            catch (Exception ex)
+            var response = new ScheduleResponse
             {
-                Console.WriteLine($"Error retrieving schedule: {ex.Message}");
-                return StatusCode(500, "Internal server error");
-            }
+                ScheduleID = schedule.ScheduleID,
+                StartTime = schedule.StartTime,
+                EndTime = schedule.EndTime,
+                Status = schedule.Status,
+                Mode = schedule.Mode,
+                SourceVideoHistoryID = schedule.SourceVideoHistoryID
+            };
+
+            return Ok(response);
         }
 
-        // POST: api/schedule
         [Authorize(Roles = "SchoolOwner")]
-        [HttpPost("CreateSchedule")]
+        [HttpPost]
         public async Task<IActionResult> CreateSchedule([FromBody] CreateScheduleRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            try
+            if (request.StartTime >= request.EndTime)
+                return BadRequest(new { error = "Start Time must be earlier than End Time." });
+
+            var schedule = new Schedule
             {
-                Console.WriteLine("Received CreateSchedule request...");
-                Console.WriteLine($"StartTime: {request.StartTime}, EndTime: {request.EndTime}");
+                ProgramID = request.ProgramID,
+                StartTime = request.StartTime,
+                EndTime = request.EndTime,
+                Status = "Active",
+                Mode = request.Mode ?? "live",
+                SourceVideoHistoryID = request.SourceVideoHistoryID
+            };
 
-                var schedule = new Schedule
-                {
-                    StartTime = request.StartTime,
-                    EndTime = request.EndTime,
-                    Status = "Active"
-                };
+            var createdSchedule = await _scheduleService.CreateScheduleAsync(schedule);
 
-                Console.WriteLine("Sending schedule to service...");
-                var created = await _scheduleService.CreateScheduleAsync(schedule);
-
-                var response = new ScheduleResponse
-                {
-                    ScheduleID = created.ScheduleID,
-                    StartTime = created.StartTime,
-                    EndTime = created.EndTime,
-                    Status = created.Status
-                };
-
-                Console.WriteLine($"Schedule created successfully with ID: {created.ScheduleID}");
-                return CreatedAtAction(nameof(GetScheduleById), new { id = created.ScheduleID }, response);
-            }
-            catch (Exception ex)
+            var response = new ScheduleResponse
             {
-                Console.WriteLine($"Error creating schedule: {ex.Message}");
-                if (ex.InnerException != null)
-                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-                return StatusCode(500, "Internal server error");
-            }
+                ScheduleID = createdSchedule.ScheduleID,
+                StartTime = createdSchedule.StartTime,
+                EndTime = createdSchedule.EndTime,
+                Status = createdSchedule.Status,
+                Mode = createdSchedule.Mode,
+                SourceVideoHistoryID = createdSchedule.SourceVideoHistoryID
+            };
+
+            return CreatedAtAction(nameof(GetScheduleById), new { id = createdSchedule.ScheduleID }, response);
         }
 
-        // PUT: api/schedule/{id}
         [Authorize(Roles = "SchoolOwner")]
-        [HttpPut("UpdateSchedule/{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdateSchedule(int id, [FromBody] UpdateScheduleRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            try
-            {
-                var existingSchedule = await _scheduleService.GetScheduleByIdAsync(id);
-                if (existingSchedule == null)
-                    return NotFound("Schedule not found");
+            var existingSchedule = await _scheduleService.GetScheduleByIdAsync(id);
+            if (existingSchedule == null)
+                return NotFound(new { message = "Schedule not found." });
 
-                if (!existingSchedule.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest("Only active schedules can be updated");
+            if (!existingSchedule.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { error = "Only active schedules can be updated." });
 
-                existingSchedule.StartTime = request.StartTime;
-                existingSchedule.EndTime = request.EndTime;
+            existingSchedule.StartTime = request.StartTime;
+            existingSchedule.EndTime = request.EndTime;
 
-                var updated = await _scheduleService.UpdateScheduleAsync(existingSchedule);
-                if (!updated)
-                    return StatusCode(500, "Failed to update schedule");
+            var updated = await _scheduleService.UpdateScheduleAsync(existingSchedule);
+            if (!updated)
+                return StatusCode(500, new { error = "Failed to update schedule." });
 
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating schedule: {ex.Message}");
-                return StatusCode(500, "Internal server error");
-            }
+            return Ok(new { message = "Schedule updated successfully." });
         }
 
-        // DELETE: api/schedule/{id}
         [Authorize(Roles = "SchoolOwner,Admin")]
-        [HttpDelete("DeleteSchedule/{id}")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSchedule(int id)
         {
-            try
-            {
-                var schedule = await _scheduleService.GetScheduleByIdAsync(id);
-                if (schedule == null)
-                    return NotFound("Schedule not found");
+            var schedule = await _scheduleService.GetScheduleByIdAsync(id);
+            if (schedule == null)
+                return NotFound(new { message = "Schedule not found." });
 
-                var deleted = await _scheduleService.DeleteScheduleAsync(id);
-                if (!deleted)
-                    return StatusCode(500, "Failed to update schedule status");
+            var deleted = await _scheduleService.DeleteScheduleAsync(id);
+            if (!deleted)
+                return StatusCode(500, new { error = "Failed to delete schedule." });
 
-                return NoContent();
-            }
-            catch (Exception ex)
+            return Ok(new { message = "Schedule deleted successfully." });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("dashboard/totalSchedules")]
+        public async Task<IActionResult> GetTotalSchedules()
+        {
+            var totalSchedules = await _scheduleService.CountSchedulesAsync();
+            return Ok(new { totalSchedules });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("dashboard/activeSchedules")]
+        public async Task<IActionResult> GetActiveSchedulesCount()
+        {
+            var activeSchedules = await _scheduleService.CountSchedulesByStatusAsync("Active");
+            return Ok(new { activeSchedules });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("dashboard/schedulesByStatus")]
+        public async Task<IActionResult> GetSchedulesByStatus()
+        {
+            var result = await _scheduleService.GetScheduleCountByStatusAsync();
+            return Ok(result);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("now-playing")]
+        public async Task<IActionResult> GetNowPlayingSchedule()
+        {
+            var now = DateTime.UtcNow;
+
+            var schedules = await _scheduleService.GetAllSchedulesAsync();
+            var current = schedules
+                .Where(s => s.Mode == "replay"
+                    && s.SourceVideoHistoryID.HasValue
+                    && s.StartTime <= now
+                    && s.EndTime >= now
+                    && s.Status == "Active")
+                .FirstOrDefault();
+
+            if (current == null)
+                return NotFound(new { message = "Rigth now there is schedul for playback video." });
+
+            var video = current.VideoHistory ?? current.Program?.VideoHistories
+                ?.FirstOrDefault(v => v.VideoHistoryID == current.SourceVideoHistoryID.Value);
+
+            if (video == null || string.IsNullOrEmpty(video.PlaybackUrl))
+                return NotFound(new { message = "There is no video." });
+
+            return Ok(new
             {
-                Console.WriteLine($"Error updating schedule status: {ex.Message}");
-                return StatusCode(500, "Internal server error");
-            }
+                scheduleId = current.ScheduleID,
+                programId = current.ProgramID,
+                sourceVideoId = current.SourceVideoHistoryID,
+                playbackUrl = video.PlaybackUrl,
+                description = video.Description,
+                startTime = current.StartTime,
+                endTime = current.EndTime,
+                mode = current.Mode,
+                type = "replay"
+            });
         }
     }
 }

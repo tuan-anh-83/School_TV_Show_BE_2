@@ -9,6 +9,7 @@ namespace Repos
 {
     public interface IAccountRepo
     {
+        Task<bool> HardDeleteAccountAsync(int accountId);
         Task<Account?> GetAccountByUsernameAsync(string username);
         Task<Account?> GetAccountByEmailAsync(string email);
         Task<Role?> GetRoleByIdAsync(int roleId);
@@ -17,7 +18,7 @@ namespace Repos
         Task<bool> DeleteAccountAsync(int accountId);
         Task<bool> SignUpAsync(Account account);
         Task<bool> UpdateAccountAsync(Account account);
-        Task<Account?> Login(string email, string password);
+        Task<Account?> LoginAsync(string email, string password);
         Task<Account?> SearchAccountByIdAsync(int accountId);
         Task<List<Account>> SearchAccountsByNameAsync(string searchTerm);
         Task<bool> AssignRoleAsync(int accountId, int roleId);

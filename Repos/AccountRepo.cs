@@ -10,6 +10,11 @@ namespace Repos
 {
     public class AccountRepo : IAccountRepo
     {
+
+        public async Task<bool> HardDeleteAccountAsync(int accountId)
+        {
+            return await AccountDAO.Instance.HardDeleteAccountAsync(accountId);
+        }
         public async Task<bool> AssignRoleAsync(int accountId, int roleId)
         {
             return await AccountDAO.Instance.AssignRoleAsync(accountId, roleId);    
@@ -70,9 +75,9 @@ namespace Repos
             return AccountDAO.Instance.InvalidatePasswordResetTokenAsync(accountId, token);
         }
 
-        public async Task<Account> Login(string email, string password)
+        public async Task<Account> LoginAsync(string email, string password)
         {
-            return await AccountDAO.Instance.Login(email, password);
+            return await AccountDAO.Instance.LoginAsync(email, password);
         }
 
         public Task SavePasswordResetTokenAsync(int accountId, string token, DateTime expiration)

@@ -4,11 +4,10 @@ namespace School_TV_Show.DTO
 {
     public class CreateScheduleRequest
     {
-        [Required(ErrorMessage = "StartTime is required.")]
+        public int ProgramID { get; set; }
         public DateTime StartTime { get; set; }
-
-        [Required(ErrorMessage = "EndTime is required.")]
         public DateTime EndTime { get; set; }
-
+        public string? Mode { get; set; }
+        public int? SourceVideoHistoryID { get; set; }
     }
 }

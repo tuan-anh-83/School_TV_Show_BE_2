@@ -25,7 +25,8 @@ namespace BOs.Models
         public string? ExternalProvider { get; set; }
         public string? ExternalProviderKey { get; set; }
         public ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = new List<PasswordResetToken>();
-        public ICollection<Follow> Follows { get; set; }
+        public ICollection<SchoolChannelFollow> Follows { get; set; }
+        public ICollection<ProgramFollow> ProgramFollows { get; set; }
 
     }
 }

@@ -32,39 +32,23 @@ namespace DAOs
         }
         public async Task<Schedule> CreateScheduleAsync(Schedule schedule)
         {
-            try
-            {
-                Console.WriteLine("Attempting to create a new schedule...");
-                Console.WriteLine($"StartTime: {schedule.StartTime}, EndTime: {schedule.EndTime}, Status: {schedule.Status}");
+            if (schedule.StartTime >= schedule.EndTime)
+                throw new Exception("StartTime must be earlier than EndTime.");
 
-                _context.Schedules.Add(schedule);
-                await _context.SaveChangesAsync();
+            if (string.IsNullOrWhiteSpace(schedule.Status))
+                schedule.Status = "Active";
 
-                Console.WriteLine("Schedule created successfully.");
-                return schedule;
-            }
-            catch (DbUpdateException dbEx)
-            {
-                Console.WriteLine($"Database error occurred while saving the schedule: {dbEx.Message}");
-                if (dbEx.InnerException != null)
-                    Console.WriteLine($"Inner Exception: {dbEx.InnerException.Message}");
-
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Unexpected error occurred: {ex.Message}");
-                if (ex.InnerException != null)
-                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-
-                throw;
-            }
+            _context.Schedules.Add(schedule);
+            await _context.SaveChangesAsync();
+            return schedule;
         }
-
 
         public async Task<Schedule> GetScheduleByIdAsync(int scheduleId)
         {
-            return await _context.Schedules.FirstOrDefaultAsync(s => s.ScheduleID == scheduleId);
+            var schedule = await _context.Schedules.FirstOrDefaultAsync(s => s.ScheduleID == scheduleId);
+            if (schedule == null)
+                throw new Exception("Schedule not found.");
+            return schedule;
         }
 
         public async Task<IEnumerable<Schedule>> GetAllSchedulesAsync()
@@ -76,10 +60,14 @@ namespace DAOs
         {
             var existingSchedule = await _context.Schedules.FindAsync(schedule.ScheduleID);
             if (existingSchedule == null)
-                return false;
+                throw new Exception("Schedule not found.");
+
+            if (schedule.StartTime >= schedule.EndTime)
+                throw new Exception("StartTime must be earlier than EndTime.");
 
             existingSchedule.StartTime = schedule.StartTime;
             existingSchedule.EndTime = schedule.EndTime;
+            existingSchedule.Status = schedule.Status;
 
             _context.Schedules.Update(existingSchedule);
             return await _context.SaveChangesAsync() > 0;
@@ -89,12 +77,32 @@ namespace DAOs
         {
             var schedule = await _context.Schedules.FindAsync(scheduleId);
             if (schedule == null)
-                return false;
+                throw new Exception("Schedule not found.");
 
             schedule.Status = "Inactive";
 
             _context.Schedules.Update(schedule);
             return await _context.SaveChangesAsync() > 0;
         }
+
+        public async Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime)
+        {
+            if (startTime >= endTime)
+                throw new Exception("StartTime must be earlier than EndTime.");
+
+            return await _context.Schedules
+                .Where(s => s.StartTime >= startTime && s.EndTime <= endTime)
+                .Include(s => s.Program)
+                .ToListAsync();
+        }
+        public async Task<IEnumerable<Schedule>> GetActiveSchedulesAsync()
+        {
+            return await _context.Schedules
+                .Where(s => s.Status == "Active")
+                .Include(s => s.Program)
+                .Include(s => s.VideoHistory)
+                .ToListAsync();
+        }
+
     }
 }

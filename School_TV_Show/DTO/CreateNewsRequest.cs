@@ -8,6 +8,9 @@ namespace School_TV_Show.DTO
         public int SchoolChannelID { get; set; }
 
         [Required]
+        public int CategoryNewsID { get; set; }
+
+        [Required]
         [StringLength(250, ErrorMessage = "The title cannot exceed 250 characters.")]
         public string Title { get; set; }
 

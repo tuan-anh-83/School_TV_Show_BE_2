@@ -48,18 +48,10 @@ namespace DAOs
                                  .ToListAsync();
         }
 
-        public async Task<SchoolChannel?> GetByNameAsync(string name)
-        {
-            return await _context.SchoolChannels
-                                 .AsNoTracking()
-                                 .Include(s => s.News)
-                                 .FirstOrDefaultAsync(s => s.Name.ToLower() == name.ToLower() && s.Status);
-        }
-
         public async Task<SchoolChannel?> GetByIdAsync(int id)
         {
             return await _context.SchoolChannels
-                                 .Include(sc => sc.Account) // Include Account details
+                                 .Include(sc => sc.Account)
                                  .FirstOrDefaultAsync(sc => sc.SchoolChannelID == id);
         }
 
@@ -118,6 +110,10 @@ namespace DAOs
             schoolChannel.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
+        }
+        public async Task<bool> DoesAccountHaveSchoolChannelAsync(int accountId)
+        {
+            return await _context.SchoolChannels.AnyAsync(sc => sc.AccountID == accountId);
         }
 
     }

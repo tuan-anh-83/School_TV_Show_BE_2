@@ -21,5 +21,6 @@ namespace Services
         Task<IEnumerable<News>> GetAllNewsNoFilterAsync();
         Task<IEnumerable<News>> GetNewsBySchoolChannelAsync(int schoolChannelId, int? accountId, bool isFollowing);
         Task<IEnumerable<News>> GetActiveNewsWithFollowCheckAndWithoutFollowingAsync(int? accountId);
+        Task<Dictionary<DateTime, int>> GetDailyNewsStatisticsAsync();
     }
 }

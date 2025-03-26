@@ -2,29 +2,125 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Net.payOS.Types;
+using Net.payOS;
 using School_TV_Show.DTO;
 using Services;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace School_TV_Show.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/orders")]
     [ApiController]
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
-        private readonly IPackageService _packageService;
         private readonly IOrderDetailService _orderDetailService;
-        public OrderController(IOrderService orderService, IPackageService packageService, IOrderDetailService orderDetailService)
+        private readonly IPackageService _packageService;
+        private readonly PayOS _payOS;
+        //private readonly OrderTrackingService _orderTrackingService;
+        public OrderController(
+           IOrderService orderService,
+           IOrderDetailService orderDetailService,
+           IPackageService packageService,
+           PayOS payOS)
         {
             _orderService = orderService;
-            _packageService = packageService;
             _orderDetailService = orderDetailService;
-
+            _packageService = packageService;
+            _payOS = payOS;
         }
 
+        [HttpPost("create")]
+        [Authorize(Roles = "SchoolOwner")]
+        public async Task<IActionResult> CreateOrder(
+            [FromBody] CreateOrderRequestDTO request,
+            [FromQuery] string returnUrl,
+            [FromQuery] string cancelUrl)
+        {
+            try
+            {
+                Console.WriteLine($"Received Request: {JsonSerializer.Serialize(request)}");
+
+                if (request == null || request.PackageID <= 0 || request.Quantity <= 0)
+                {
+                    return BadRequest(new { message = "PackageID and Quantity are required and must be greater than 0" });
+                }
+
+                var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(accountIdClaim, out int accountId))
+                {
+                    return Unauthorized("Invalid account information.");
+                }
+
+                var package = await _packageService.GetPackageByIdAsync(request.PackageID);
+                if (package == null || package.Status != "Active")
+                {
+                    return BadRequest(new { message = "Invalid PackageID or package is not active." });
+                }
+
+                decimal totalPrice = package.Price * request.Quantity;
+
+                var order = new Order
+                {
+                    AccountID = accountId,
+                    OrderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), // Unique order code
+                    Status = "Pending",
+                    TotalPrice = totalPrice,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                var createdOrder = await _orderService.CreateOrderAsync(order);
+
+                var orderDetail = new OrderDetail
+                {
+                    OrderID = createdOrder.OrderID,
+                    PackageID = request.PackageID,
+                    Quantity = request.Quantity,
+                    Price = totalPrice
+                };
+
+                await _orderDetailService.CreateOrderDetailAsync(orderDetail);
+
+                long uniquePaymentId = createdOrder.OrderCode; // Use OrderCode
+
+                List<ItemData> items = new()
+        {
+            new ItemData(package.Name, orderDetail.Quantity, (int)(package.Price))
+        };
+
+                PaymentData paymentData = new PaymentData(
+                    uniquePaymentId,
+                    (int)(orderDetail.Price),
+                    "Order Payment",
+                    items,
+                    cancelUrl,
+                    returnUrl
+                );
+
+                CreatePaymentResult paymentResult = await _payOS.createPaymentLink(paymentData);
+                Console.WriteLine($"PayOS Response: {JsonSerializer.Serialize(paymentResult)}");
+
+                return Ok(new
+                {
+                    message = "Order created successfully",
+                    orderId = createdOrder.OrderID,
+                    paymentLink = paymentResult.checkoutUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                return StatusCode(500, new { message = "Error creating order", error = ex.Message });
+            }
+        }
+
+
+
+        [HttpGet]
         [Authorize(Roles = "Admin")]
-        [HttpGet("GetAllOrders")]
         public async Task<IActionResult> GetAllOrders()
         {
             try
@@ -39,82 +135,128 @@ namespace School_TV_Show.Controllers
             }
         }
 
+        [HttpGet("active")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetActiveOrders()
+        {
+            try
+            {
+                var orders = await _orderService.GetAllOrdersAsync();
+                if (orders == null || !orders.Any())
+                    return NotFound("No orders found.");
+
+                var activeOrders = orders.Where(o =>
+                    o.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ||
+                    o.Status.Equals("Done", StringComparison.OrdinalIgnoreCase)
+                );
+                if (!activeOrders.Any())
+                    return NotFound("No active orders found.");
+
+                return Ok(activeOrders);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving active orders: {ex.Message}");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetOrderById(int id)
         {
-            var order = await _orderService.GetOrderByIdAsync(id);
-            if (order == null)
+            try
             {
-                return NotFound("Order not found.");
+                var order = await _orderService.GetOrderByIdAsync(id);
+                if (order == null)
+                {
+                    return NotFound(new { message = "Order not found." });
+                }
+                return Ok(order);
             }
-            return Ok(order);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving order: {ex.Message}");
+                return StatusCode(500, "Internal server error");
+            }
         }
 
-        [Authorize(Roles = "SchoolOwner")]
-        [HttpPost("CreateOrder")]
-        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequestDTO request)
-        {
-            if (request == null || request.Quantity <= 0)
-            {
-                return BadRequest("Invalid order data.");
-            }
-
-            var accountIdClaim = User.FindFirst("AccountID")?.Value;
-            if (!int.TryParse(accountIdClaim, out var accountId))
-            {
-                return Unauthorized("Token không hợp lệ, AccountID không đúng định dạng.");
-            }
-
-            var package = await _packageService.GetPackageByIdAsync(request.PackageID);
-            if (package == null)
-            {
-                return NotFound("Package not found.");
-            }
-
-            decimal totalPrice = package.Price * request.Quantity;
-
-            var newOrder = new Order
-            {
-                AccountID = accountId,
-                TotalPrice = totalPrice,
-                Status = "Pending",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            var createdOrder = await _orderService.CreateOrderAsync(newOrder);
-            var orderDetail = new OrderDetail
-            {
-                OrderID = createdOrder.OrderID,
-                PackageID = request.PackageID,
-                Quantity = request.Quantity,
-                Price = totalPrice
-            };
-
-            await _orderDetailService.CreateOrderDetailAsync(orderDetail);
-
-            return CreatedAtAction(nameof(GetOrderById), new { id = createdOrder.OrderID }, createdOrder);
-        }
-
-        [HttpGet("GetOrderHistory")]
+        [HttpGet("history")]
         [Authorize(Roles = "SchoolOwner")]
         public async Task<IActionResult> GetOrderHistory()
         {
-            var accountIdClaim = User.FindFirst("AccountID")?.Value;
-            if (!int.TryParse(accountIdClaim, out var accountId))
+            try
             {
-                return Unauthorized("Token không hợp lệ, AccountID không đúng định dạng.");
-            }
+                var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(accountIdClaim, out int accountId))
+                {
+                    return Unauthorized("Invalid account information.");
+                }
 
-            var orders = await _orderService.GetOrdersByAccountIdAsync(accountId);
-            if (orders == null || !orders.Any())
+                var orders = await _orderService.GetOrderHistoryAsync(accountId);
+                if (orders == null || !orders.Any())
+                {
+                    return NotFound(new { message = "No orders found for this account." });
+                }
+
+                return Ok(orders);
+            }
+            catch (Exception ex)
             {
-                return NotFound(new { message = "No orders found for this account." });
+                Console.WriteLine($"Error retrieving order history: {ex.Message}");
+                return StatusCode(500, "Internal server error");
             }
-
-            return Ok(orders);
-
         }
+
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateOrder(int id, [FromBody] UpdateOrderRequest request)
+        {
+            if (request == null || string.IsNullOrEmpty(request.Status))
+            {
+                return BadRequest(new { message = "Status is required." });
+            }
+
+            try
+            {
+                var existingOrder = await _orderService.GetOrderByIdAsync(id);
+                if (existingOrder == null)
+                {
+                    return NotFound(new { message = "Order not found." });
+                }
+
+                existingOrder.Status = request.Status;
+                existingOrder.UpdatedAt = DateTime.UtcNow;
+
+                await _orderService.UpdateOrderAsync(existingOrder);
+
+                return Ok(new { message = "Order updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating order: {ex.Message}");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+        [HttpGet("statistics")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetOrderStatistics(
+              [FromQuery] DateTime? startDate,
+              [FromQuery] DateTime? endDate,
+              [FromQuery] string interval = "daily")
+        {
+            try
+            {
+                var statistics = await _orderService.GetOrderStatisticsAsync(startDate, endDate, interval);
+                return Ok(statistics);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving order statistics: {ex.Message}");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
 
     }
 

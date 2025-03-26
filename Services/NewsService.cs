@@ -100,5 +100,10 @@ namespace Services
         {
             return await _newsRepo.GetActiveNewsWithFollowCheckAndWithoutFollowingAsync(accountId);
         }
+
+        public async Task<Dictionary<DateTime, int>> GetDailyNewsStatisticsAsync()
+        {
+            return await _newsRepo.GetDailyNewsStatisticsAsync();
+        }
     }
 }

@@ -55,5 +55,10 @@ namespace Repos
         {
             return await NewsDAO.Instance.ValidateSchoolChannelOwnershipAsync(schoolChannelId, accountId);
         }
+
+        public async Task<Dictionary<DateTime, int>> GetDailyNewsStatisticsAsync()
+        {
+            return await NewsDAO.Instance.GetDailyNewsStatisticsAsync();
+        }
     }
 }

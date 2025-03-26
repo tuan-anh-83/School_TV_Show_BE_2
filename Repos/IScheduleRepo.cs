@@ -14,5 +14,7 @@ namespace Repos
         Task<IEnumerable<Schedule>> GetAllSchedulesAsync();
         Task<bool> UpdateScheduleAsync(Schedule schedule);
         Task<bool> DeleteScheduleAsync(int scheduleId);
+        Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime);
+        Task<IEnumerable<Schedule>> GetActiveSchedulesAsync();
     }
 }

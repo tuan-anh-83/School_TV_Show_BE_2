@@ -1,12 +1,14 @@
 ﻿using BOs.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using School_TV_Show.DTO;
 using Services;
 
 namespace School_TV_Show.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
+
     public class PackageController : ControllerBase
     {
         private readonly IPackageService _packageService;
@@ -18,7 +20,8 @@ namespace School_TV_Show.Controllers
             _logger = logger;
         }
 
-        [HttpGet("GetAllPackages")]
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
         public async Task<IActionResult> GetAllPackages()
         {
             try
@@ -33,22 +36,8 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        [HttpGet("GetActivePackages")]
-        public async Task<IActionResult> GetActivePackages()
-        {
-            try
-            {
-                var packages = await _packageService.GetActivePackagesAsync();
-                return Ok(packages);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving packages");
-                return StatusCode(500, "Internal server error");
-            }
-        }
-
-        [HttpGet("GetPackageById{id}")]
+        [Authorize(Roles = "Admin")]
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetPackageById(int id)
         {
             try
@@ -65,8 +54,21 @@ namespace School_TV_Show.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+        [Authorize(Roles = "Admin")]
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return BadRequest("Name parameter is required.");
 
-        [HttpPost("AddPackage")]
+            List<Package> packages = await _packageService.SearchPackagesByNameAsync(name);
+            if (packages == null || packages.Count == 0)
+                return NotFound("No packages found with the provided name.");
+
+            return Ok(packages);
+        }
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
         public async Task<IActionResult> AddPackage([FromBody] CreatePackageRequestDTO request)
         {
             if (request == null)
@@ -78,7 +80,7 @@ namespace School_TV_Show.Controllers
                 Description = request.Description,
                 Price = request.Price,
                 Duration = request.Duration,
-                Status = "Active", 
+                Status = "Active",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -95,8 +97,8 @@ namespace School_TV_Show.Controllers
             }
         }
 
-
-        [HttpPut("UpdatePackage{id}")]
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePackage(int id, [FromBody] UpdatePackageRequestDTO request)
         {
             try
@@ -104,12 +106,14 @@ namespace School_TV_Show.Controllers
                 var existingPackage = await _packageService.GetPackageByIdAsync(id);
                 if (existingPackage == null)
                     return NotFound("Package not found");
+                if (existingPackage.Status == "Inactive")
+                    return Unauthorized("Inactive packagee cannot be updated.");
 
                 existingPackage.Name = request.Name;
                 existingPackage.Description = request.Description;
                 existingPackage.Price = request.Price;
                 existingPackage.Duration = request.Duration;
-                existingPackage.UpdatedAt = DateTime.UtcNow; 
+                existingPackage.UpdatedAt = DateTime.UtcNow;
 
                 bool isUpdated = await _packageService.UpdatePackageAsync(existingPackage);
                 if (!isUpdated)
@@ -124,8 +128,8 @@ namespace School_TV_Show.Controllers
             }
         }
 
-
-        [HttpDelete("DeletePackage{id}")]
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePackage(int id)
         {
             try
@@ -139,6 +143,50 @@ namespace School_TV_Show.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting package");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [Authorize(Roles = "SchoolOwner")]
+        [HttpGet("active")]
+        public async Task<IActionResult> GetAllActivePackages()
+        {
+            try
+            {
+                var packages = await _packageService.GetAllActivePackagesAsync();
+                var result = packages.Select(p => new PackageAdminResponse
+                {
+                    PackageID = p.PackageID,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Price = p.Price,
+                    Duration = p.Duration,
+                    Status = p.Status,
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt
+                }).ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving admin packages");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("statistics/top-packages")]
+        public async Task<IActionResult> GetTopPurchasedPackages()
+        {
+            try
+            {
+                var topPackages = await _packageService.GetTopPurchasedPackagesAsync();
+                return Ok(topPackages);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving top purchased packages");
                 return StatusCode(500, "Internal server error");
             }
         }

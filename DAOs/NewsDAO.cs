@@ -60,6 +60,7 @@ namespace DAOs
             });
         }
 
+
         public async Task<int> UpdateNewsAsync(News news, List<NewsPicture> pictures)
         {
             var strategy = context.Database.CreateExecutionStrategy();
@@ -81,6 +82,7 @@ namespace DAOs
                     existingNews.Content = news.Content ?? existingNews.Content;
                     existingNews.UpdatedAt = DateTime.UtcNow;
                     existingNews.Status = news.Status;
+                    existingNews.CategoryNewsID = news.CategoryNewsID;
 
                     if (pictures != null && pictures.Count > 0)
                     {
@@ -184,6 +186,13 @@ namespace DAOs
 
             return await query.ToListAsync();
         }
-
+        public async Task<Dictionary<DateTime, int>> GetDailyNewsStatisticsAsync()
+        {
+            return await context.News
+                .Where(n => n.Status)
+                .GroupBy(n => n.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Date, g => g.Count);
+        }
     }
 }

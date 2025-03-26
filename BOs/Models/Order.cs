@@ -15,7 +15,8 @@ namespace BOs.Models
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public Account Account { get; set; }
-        public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
-        public Payment Payment { get; set; }
+        public long OrderCode { get; set; }
+        public ICollection<OrderDetail> OrderDetails { get; set; }
+        public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }
 }

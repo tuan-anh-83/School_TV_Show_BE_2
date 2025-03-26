@@ -1,9 +1,6 @@
 ﻿using BOs.Models;
 using DAOs;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repos
@@ -20,14 +17,14 @@ namespace Repos
             return await PackageDAO.Instance.DeletePackageAsync(packageId);
         }
 
-        public Task<List<Package>> GetActivePackagesAsync()
+        public async Task<List<Package>> GetAllActivePackagesAsync()
         {
-            return PackageDAO.Instance.GetActivePackagesAsync();
+            return await PackageDAO.Instance.GetAllActivePackagesAsync();
         }
 
-        public Task<List<Package>> GetAllPackagesAsync()
+        public async Task<List<Package>> GetAllPackagesAsync()
         {
-            return PackageDAO.Instance.GetAllPackagesAsync();
+            return await PackageDAO.Instance.GetAllPackagesAsync();
         }
 
         public async Task<Package?> GetPackageByIdAsync(int packageId)
@@ -38,6 +35,16 @@ namespace Repos
         public async Task<bool> UpdatePackageAsync(Package package)
         {
             return await PackageDAO.Instance.UpdatePackageAsync(package);
+        }
+
+        public async Task<List<object>> GetTopPurchasedPackagesAsync()
+        {
+            return await PackageDAO.Instance.GetTopPurchasedPackagesAsync();
+        }
+
+        public async Task<List<Package>> SearchPackagesByNameAsync(string name)
+        {
+            return await PackageDAO.Instance.SearchPackagesByNameAsync(name);
         }
     }
 }

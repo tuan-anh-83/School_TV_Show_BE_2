@@ -10,25 +10,25 @@ namespace BOs.Models
     {
         public int ProgramID { get; set; }
 
-        //public int ScheduleID { get; set; }
-
         public int SchoolChannelID { get; set; }
+
         public string ProgramName { get; set; }
         public string Title { get; set; }
         public string Link { get; set; }
         public string Status { get; set; }
 
-        public ICollection<Schedule> Schedules { get; set; }
         public virtual SchoolChannel SchoolChannel { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-        public ICollection<VideoHistory> VideoHistories { get; set; } // Navigation property
-        /*public Program()
+
+        public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
+        public ICollection<VideoHistory> VideoHistories { get; set; }
+        public ICollection<ProgramFollow> ProgramFollows { get; set; }
+
+        public Program()
         {
-            Schedule = new Schedule();
             SchoolChannel = new SchoolChannel();
-        }*/
+        }
     }
 }

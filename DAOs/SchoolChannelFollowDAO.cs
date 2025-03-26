@@ -9,29 +9,29 @@ using System.Threading.Tasks;
 
 namespace DAOs
 {
-    public class FollowDAO
+    public class SchoolChannelFollowDAO
     {
-        private static FollowDAO instance = null;
+        private static SchoolChannelFollowDAO instance = null;
         private readonly DataContext _context;
 
-        private FollowDAO()
+        private SchoolChannelFollowDAO()
         {
             _context = new DataContext();
         }
 
-        public static FollowDAO Instance
+        public static SchoolChannelFollowDAO Instance
         {
             get
             {
                 if (instance == null)
                 {
-                    instance = new FollowDAO();
+                    instance = new SchoolChannelFollowDAO();
                 }
                 return instance;
             }
         }
 
-        public async Task AddFollowAsync(Follow follow)
+        public async Task AddFollowAsync(SchoolChannelFollow follow)
         {
             var existingFollow = await _context.Follows
                 .FirstOrDefaultAsync(f => f.AccountID == follow.AccountID && f.SchoolChannelID == follow.SchoolChannelID);
@@ -69,7 +69,7 @@ namespace DAOs
                 .CountAsync();
         }
 
-        public async Task<List<Follow>> GetAllFollowsAsync()
+        public async Task<List<SchoolChannelFollow>> GetAllFollowsAsync()
         {
             return await _context.Follows
                 .Include(f => f.Account)
@@ -77,7 +77,7 @@ namespace DAOs
                 .ToListAsync();
         }
 
-        public async Task<Follow> GetFollowAsync(int accountId, int schoolChannelId)
+        public async Task<SchoolChannelFollow> GetFollowAsync(int accountId, int schoolChannelId)
         {
             return await _context.Follows
                 .FirstOrDefaultAsync(f => f.AccountID == accountId && f.SchoolChannelID == schoolChannelId);
@@ -87,6 +87,28 @@ namespace DAOs
         {
             return await _context.Follows
                 .AnyAsync(f => f.AccountID == accountId && f.SchoolChannelID == schoolChannelId && f.Status == "Followed");
+        }
+        public async Task<IEnumerable<SchoolChannel>> GetFollowedSchoolChannelsAsync(int accountId)
+        {
+            return await _context.Follows
+                .Where(f => f.AccountID == accountId && f.Status == "Followed" && f.SchoolChannel.Status == true)
+                .Include(f => f.SchoolChannel)
+                .Select(f => f.SchoolChannel)
+                .ToListAsync();
+        }
+        public async Task<List<object>> GetAllFollowedSchoolChannelsAsync()
+        {
+            return await _context.Follows
+                .Where(f => f.Status == "Followed")
+                .GroupBy(f => f.SchoolChannelID)
+                .Select(g => new
+                {
+                    SchoolChannelID = g.Key,
+                    FollowCount = g.Count()
+                })
+                .OrderByDescending(g => g.FollowCount)
+                .Cast<object>()
+                .ToListAsync();
         }
     }
 }

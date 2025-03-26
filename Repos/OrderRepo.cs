@@ -1,9 +1,6 @@
 ﻿using BOs.Models;
 using DAOs;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repos
@@ -15,9 +12,9 @@ namespace Repos
             return await OrderDAO.Instance.CreateOrderAsync(order);
         }
 
-        public async Task<bool> DeleteOrderAsync(int orderId)
+        public async Task<Order> GetOrderByIdAsync(int orderId)
         {
-            return await OrderDAO.Instance.DeleteOrderAsync(orderId);
+            return await OrderDAO.Instance.GetOrderByIdAsync(orderId);
         }
 
         public async Task<IEnumerable<Order>> GetAllOrdersAsync()
@@ -25,9 +22,9 @@ namespace Repos
             return await OrderDAO.Instance.GetAllOrdersAsync();
         }
 
-        public async Task<Order> GetOrderByIdAsync(int orderId)
+        public async Task<Order> UpdateOrderAsync(Order order)
         {
-            return await OrderDAO.Instance.GetOrderByIdAsync(orderId);
+            return await OrderDAO.Instance.UpdateOrderAsync(order);
         }
 
         public async Task<IEnumerable<Order>> GetOrdersByAccountIdAsync(int accountId)
@@ -35,9 +32,14 @@ namespace Repos
             return await OrderDAO.Instance.GetOrdersByAccountIdAsync(accountId);
         }
 
-        public async Task<bool> UpdateOrderAsync(Order order)
+        public async Task<Order> GetOrderByOrderCodeAsync(long orderCode)
         {
-            return await OrderDAO.Instance.UpdateOrderAsync(order);
+            return await OrderDAO.Instance.GetOrderByOrderCodeAsync(orderCode);
+        }
+
+        public async Task<object> GetOrderStatisticsAsync(DateTime? startDate, DateTime? endDate, string interval)
+        {
+            return await OrderDAO.Instance.GetOrderStatisticsAsync(startDate, endDate, interval);
         }
     }
 }

@@ -10,10 +10,12 @@ namespace Repos
     public interface IPackageRepo
     {
         Task<List<Package>> GetAllPackagesAsync();
-        Task<List<Package>> GetActivePackagesAsync();
         Task<Package?> GetPackageByIdAsync(int packageId);
         Task<bool> AddPackageAsync(Package package);
         Task<bool> UpdatePackageAsync(Package package);
         Task<bool> DeletePackageAsync(int packageId);
+        Task<List<Package>> GetAllActivePackagesAsync();
+        Task<List<Package>> SearchPackagesByNameAsync(string name);
+        Task<List<object>> GetTopPurchasedPackagesAsync();
     }
 }

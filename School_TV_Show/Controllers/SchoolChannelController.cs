@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 namespace School_TV_Show.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/schoolchannels")]
     [ApiController]
     public class SchoolChannelController : ControllerBase
     {
@@ -22,7 +22,7 @@ namespace School_TV_Show.Controllers
 
         // GET: api/schoolchannels/all
         [Authorize(Roles = "Admin")]
-        [HttpGet("GetAllSchoolChannels")]
+        [HttpGet("all")]
         public async Task<IActionResult> GetAllSchoolChannels()
         {
             try
@@ -43,7 +43,7 @@ namespace School_TV_Show.Controllers
 
         // GET: api/schoolchannels/active
         [Authorize(Roles = "User,SchoolOwner,Admin")]
-        [HttpGet("GetActiveSchoolChannels")]
+        [HttpGet("active")]
         public async Task<IActionResult> GetActiveSchoolChannels()
         {
             try
@@ -64,7 +64,7 @@ namespace School_TV_Show.Controllers
 
         // GET: api/schoolchannels/{id}
         [Authorize(Roles = "Admin")]
-        [HttpGet("GetSchoolChannelById/{id}")]
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetSchoolChannelById(int id)
         {
             try
@@ -84,7 +84,7 @@ namespace School_TV_Show.Controllers
 
         // POST: api/schoolchannels
         [Authorize(Roles = "SchoolOwner")]
-        [HttpPost("CreateSchoolChannel")]
+        [HttpPost]
         public async Task<IActionResult> CreateSchoolChannel([FromBody] CreateSchoolChannelRequestDTO request)
         {
             if (!ModelState.IsValid)
@@ -103,6 +103,13 @@ namespace School_TV_Show.Controllers
             if (accountId == null)
                 return Unauthorized("User is not authenticated.");
 
+            // Check if the account already has a school channel
+            bool alreadyExists = await _service.DoesAccountHaveSchoolChannelAsync(accountId.Value);
+            if (alreadyExists)
+            {
+                return BadRequest("Each account can only create one school channel.");
+            }
+
             var schoolChannel = new SchoolChannel
             {
                 Name = request.Name,
@@ -118,7 +125,7 @@ namespace School_TV_Show.Controllers
 
             try
             {
-                await _service.AddAsync(schoolChannel);
+                await _service.CreateAsync(schoolChannel);
                 var createdSchoolChannel = await _service.GetByIdAsync(schoolChannel.SchoolChannelID);
                 return CreatedAtAction(nameof(GetSchoolChannelById), new { id = schoolChannel.SchoolChannelID },
                     FormatSchoolChannelResponse(createdSchoolChannel));
@@ -132,7 +139,7 @@ namespace School_TV_Show.Controllers
 
         // PUT: api/schoolchannels/{id}
         [Authorize(Roles = "SchoolOwner")]
-        [HttpPut("UpdateSchoolChannel/{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdateSchoolChannel(int id, [FromBody] UpdateSchoolChannelRequestDTO request)
         {
             if (!ModelState.IsValid)
@@ -195,7 +202,7 @@ namespace School_TV_Show.Controllers
 
         // GET: api/schoolchannels/search
         [Authorize(Roles = "User,SchoolOwner,Admin")]
-        [HttpGet("SearchSchoolChannels")]
+        [HttpGet("search")]
         [AllowAnonymous]
         public async Task<IActionResult> SearchSchoolChannels(
             [FromQuery] string? keyword,

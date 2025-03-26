@@ -16,15 +16,9 @@ namespace Services
             _SchoolChannelRepo = schoolChannelRepo;
         }
 
-        public async Task AddAsync(SchoolChannel schoolChannel)
+        public async Task<IEnumerable<SchoolChannel>> GetAllAsync()
         {
-            await _SchoolChannelRepo.AddAsync(schoolChannel);    
-
-        }
-
-        public async Task<bool> DeleteByNameAsync(string name)
-        {
-            return await _SchoolChannelRepo.DeleteByNameAsync(name);
+            return await _SchoolChannelRepo.GetAllAsync();
         }
 
         public async Task<IEnumerable<SchoolChannel>> GetAllActiveAsync()
@@ -32,36 +26,44 @@ namespace Services
             return await _SchoolChannelRepo.GetAllActiveAsync();
         }
 
-        public async Task<IEnumerable<SchoolChannel>> GetAllAsync()
+        public async Task CreateAsync(SchoolChannel schoolChannel)
         {
-            return await _SchoolChannelRepo.GetAllAsync();
+            await _SchoolChannelRepo.AddAsync(schoolChannel);
         }
 
-        public async Task<SchoolChannel?> GetByIdAsync(int id)
+        public async Task UpdateAsync(SchoolChannel schoolChannel)
+        {
+            await _SchoolChannelRepo.UpdateAsync(schoolChannel);
+        }
+
+        public async Task<bool> DeleteByNameAsync(string name)
+        {
+            return await _SchoolChannelRepo.DeleteByNameAsync(name);
+        }
+
+        public async Task<SchoolChannel> GetByIdAsync(int id)
         {
             var result = await _SchoolChannelRepo.GetByIdAsync(id);
             return result!;
         }
 
-        public async Task<SchoolChannel?> GetByNameAsync(string name)
+        public async Task<IEnumerable<SchoolChannel>> SearchAsync(string? keyword, string? address, int? accountId)
         {
-            return await _SchoolChannelRepo.GetByNameAsync(name);
+            return await _SchoolChannelRepo.SearchAsync(keyword, address, accountId);
         }
-
         public async Task<bool> SchoolChannelExistsAsync(int schoolChannelId)
         {
             var schoolChannel = await _SchoolChannelRepo.GetByIdAsync(schoolChannelId);
             return schoolChannel != null;
         }
 
-        public async Task<IEnumerable<SchoolChannel>> SearchAsync(string? keyword, string? address, int? accountId)
+        public Task<IEnumerable<object>> GetAllChannelsAsync()
         {
-            return await _SchoolChannelRepo.SearchAsync(keyword, address, accountId);   
+            throw new NotImplementedException();
         }
-
-        public async Task UpdateAsync(SchoolChannel schoolChannel)
+        public async Task<bool> DoesAccountHaveSchoolChannelAsync(int accountId)
         {
-            await _SchoolChannelRepo.UpdateAsync(schoolChannel);
+            return await _SchoolChannelRepo.DoesAccountHaveSchoolChannelAsync(accountId);
         }
     }
 }

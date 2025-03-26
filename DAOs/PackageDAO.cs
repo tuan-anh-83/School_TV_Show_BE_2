@@ -33,19 +33,26 @@ namespace DAOs
 
         public async Task<List<Package>> GetAllPackagesAsync()
         {
-            return await context.Packages.ToListAsync();
-        }
-
-        public async Task<List<Package>> GetActivePackagesAsync()
-        {
             return await context.Packages
                 .Where(p => p.Status == "Active")
                 .ToListAsync();
         }
 
+        public async Task<List<Package>> GetAllActivePackagesAsync()
+        {
+            return await context.Packages.ToListAsync();
+        }
+
         public async Task<Package?> GetPackageByIdAsync(int packageId)
         {
-            return await context.Packages.FirstOrDefaultAsync(p => p.PackageID == packageId);
+            return await context.Packages
+                .FirstOrDefaultAsync(p => p.PackageID == packageId && p.Status == "Active");
+        }
+        public async Task<List<Package>> SearchPackagesByNameAsync(string name)
+        {
+            return await context.Packages
+                .Where(p => EF.Functions.Like(p.Name, $"%{name}%"))
+                .ToListAsync();
         }
 
         public async Task<bool> AddPackageAsync(Package package)
@@ -53,12 +60,10 @@ namespace DAOs
             package.Status = "Active";
             package.CreatedAt = DateTime.UtcNow;
             package.UpdatedAt = DateTime.UtcNow;
-
             await context.Packages.AddAsync(package);
             await context.SaveChangesAsync();
             return true;
         }
-
 
         public async Task<bool> UpdatePackageAsync(Package package)
         {
@@ -71,11 +76,9 @@ namespace DAOs
             existingPackage.Price = package.Price;
             existingPackage.Duration = package.Duration;
             existingPackage.UpdatedAt = DateTime.UtcNow;
-
             await context.SaveChangesAsync();
             return true;
         }
-
 
         public async Task<bool> DeletePackageAsync(int packageId)
         {
@@ -85,9 +88,33 @@ namespace DAOs
 
             package.Status = "Inactive";
             package.UpdatedAt = DateTime.UtcNow;
-
             await context.SaveChangesAsync();
             return true;
+        }
+        public async Task<List<object>> GetTopPurchasedPackagesAsync()
+        {
+            var result = await context.OrderDetails
+                .GroupBy(od => od.PackageID)
+                .Select(g => new
+                {
+                    PackageID = g.Key,
+                    PurchaseCount = g.Sum(od => od.Quantity)
+                })
+                .OrderByDescending(x => x.PurchaseCount)
+                .ToListAsync();
+
+            var packageDetails = await context.Packages
+                .Where(p => result.Select(r => r.PackageID).Contains(p.PackageID))
+                .ToListAsync();
+
+            var rankedPackages = result.Select(r => new
+            {
+                PackageID = r.PackageID,
+                PackageName = packageDetails.FirstOrDefault(p => p.PackageID == r.PackageID)?.Name ?? "Unknown",
+                PurchaseCount = r.PurchaseCount
+            }).ToList();
+
+            return rankedPackages.Cast<object>().ToList();
         }
     }
 }

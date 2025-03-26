@@ -18,5 +18,6 @@ namespace Repos
         Task<IEnumerable<News>> GetAllNewsAsync(bool? active);
         Task<IEnumerable<News>> GetActiveNewsWithFollowCheckAndWithoutFollowingAsync(int? accountId);
         Task<IEnumerable<News>> GetNewsBySchoolChannelAsync(int schoolChannelId, int? accountId, bool isFollowing);
+        Task<Dictionary<DateTime, int>> GetDailyNewsStatisticsAsync();
     }
 }

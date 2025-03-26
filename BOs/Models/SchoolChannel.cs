@@ -21,6 +21,6 @@ namespace BOs.Models
         public virtual Account Account { get; set; }
         public virtual ICollection<News> News { get; set; } = new List<News>();
 
-        public ICollection<Follow> Followers { get; set; }
+        public ICollection<SchoolChannelFollow> Followers { get; set; }
     }
 }

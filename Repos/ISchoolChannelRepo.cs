@@ -11,11 +11,11 @@ namespace Repos
     {
         Task<IEnumerable<SchoolChannel>> GetAllAsync();
         Task<IEnumerable<SchoolChannel>> GetAllActiveAsync();
-        Task<SchoolChannel?> GetByNameAsync(string name);
         Task<SchoolChannel?> GetByIdAsync(int id);
         Task<IEnumerable<SchoolChannel>> SearchAsync(string? keyword, string? address, int? accountId);
         Task AddAsync(SchoolChannel schoolChannel);
         Task UpdateAsync(SchoolChannel schoolChannel);
         Task<bool> DeleteByNameAsync(string name);
+        Task<bool> DoesAccountHaveSchoolChannelAsync(int accountId);
     }
 }

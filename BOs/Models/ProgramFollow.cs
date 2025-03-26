@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace BOs.Models
 {
-    public class Follow
+    public class ProgramFollow
     {
+        public int ProgramFollowID { get; set; }
         public int AccountID { get; set; }
-        public int SchoolChannelID { get; set; }
-        public string Status { get; set; } = "Followed";
+        public int ProgramID { get; set; }
+        public string Status { get; set; }
         public DateTime FollowedAt { get; set; }
-
         public Account Account { get; set; }
-        public SchoolChannel SchoolChannel { get; set; }
+        public Program Program { get; set; }
     }
 }

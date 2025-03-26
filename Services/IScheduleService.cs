@@ -14,5 +14,9 @@ namespace Services
         Task<IEnumerable<Schedule>> GetAllSchedulesAsync();
         Task<bool> UpdateScheduleAsync(Schedule schedule);
         Task<bool> DeleteScheduleAsync(int scheduleId);
+        Task<int> CountSchedulesAsync();
+        Task<int> CountSchedulesByStatusAsync(string status);
+        Task<Dictionary<string, int>> GetScheduleCountByStatusAsync();
+        Task<IEnumerable<Schedule>> GetActiveSchedulesAsync();
     }
 }

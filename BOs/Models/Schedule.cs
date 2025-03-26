@@ -10,10 +10,15 @@ namespace BOs.Models
     {
         public int ScheduleID { get; set; }
         public int ProgramID { get; set; }
-
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
-        public string Status { get; set; }
-        public Program Programs { get; set; }
+        public string Status { get; set; } = "Active";
+        public bool LiveStreamStarted { get; set; } = false;
+        public bool LiveStreamEnded { get; set; } = false;
+        public int? VideoHistoryID { get; set; }
+        public virtual Program Program { get; set; }
+        public virtual VideoHistory VideoHistory { get; set; }
+        public string Mode { get; set; } = "live";
+        public int? SourceVideoHistoryID { get; set; }
     }
 }

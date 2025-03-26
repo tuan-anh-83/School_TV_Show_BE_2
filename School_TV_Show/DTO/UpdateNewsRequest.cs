@@ -2,6 +2,7 @@
 {
     public class UpdateNewsRequest
     {
+        public int? CategoryNewsID { get; set; }
         public string Title { get; set; }
         public string Content { get; set; }
         public bool? FollowerMode { get; set; }
