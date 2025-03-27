@@ -12,7 +12,7 @@
 
     public class PayOSWebhookData
     {
-        public int orderCode { get; set; }
+        public long orderCode { get; set; }
         public int amount { get; set; }
         public string description { get; set; }
         public string accountNumber { get; set; }

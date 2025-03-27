@@ -19,7 +19,6 @@ namespace School_TV_Show.Controllers
         private readonly IOrderDetailService _orderDetailService;
         private readonly IPackageService _packageService;
         private readonly PayOS _payOS;
-        //private readonly OrderTrackingService _orderTrackingService;
         public OrderController(
            IOrderService orderService,
            IOrderDetailService orderDetailService,

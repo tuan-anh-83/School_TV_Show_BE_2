@@ -46,5 +46,9 @@ namespace Services
         {
             return await _orderRepo.GetOrderByOrderCodeAsync(orderCode);
         }
+        public async Task<IEnumerable<Order>> GetPendingOrdersOlderThanAsync(TimeSpan timeSpan)
+        {
+            return await _orderRepo.GetPendingOrdersOlderThanAsync(timeSpan);
+        }
     }
 }

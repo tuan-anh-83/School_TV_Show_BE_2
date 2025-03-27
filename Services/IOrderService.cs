@@ -15,5 +15,6 @@ namespace Services
         Task<object> GetOrderStatisticsAsync(DateTime? startDate, DateTime? endDate, string interval);
 
         Task<Order> GetOrderByOrderCodeAsync(long orderCode);
+        Task<IEnumerable<Order>> GetPendingOrdersOlderThanAsync(TimeSpan timeSpan);
     }
 }

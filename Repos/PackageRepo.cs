@@ -46,5 +46,9 @@ namespace Repos
         {
             return await PackageDAO.Instance.SearchPackagesByNameAsync(name);
         }
+        public async Task<IEnumerable<Order>> GetPendingOrdersOlderThanAsync(TimeSpan timeSpan)
+        {
+            return await OrderDAO.Instance.GetPendingOrdersOlderThanAsync(timeSpan);
+        }
     }
 }

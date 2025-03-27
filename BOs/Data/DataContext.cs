@@ -483,10 +483,10 @@ namespace BOs.Data
                       .HasForeignKey(e => e.OrderID)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(e => e.Package)
-                      .WithMany()
-                      .HasForeignKey(e => e.PackageID)
-                      .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(od => od.Package)
+                        .WithMany(p => p.OrderDetails)
+                        .HasForeignKey(od => od.PackageID)
+                        .OnDelete(DeleteBehavior.Restrict);
             });
             #endregion
 
@@ -580,6 +580,7 @@ namespace BOs.Data
                 entity.ToTable("PaymentHistory");
                 entity.HasKey(e => e.PaymentHistoryID);
                 entity.Property(e => e.PaymentHistoryID).ValueGeneratedOnAdd();
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)").IsRequired();
                 entity.Property(e => e.Status)
                       .IsRequired()
                       .HasMaxLength(100);

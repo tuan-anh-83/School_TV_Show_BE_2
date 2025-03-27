@@ -1,5 +1,8 @@
 ﻿using BOs.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Repos;
 using System;
 using System.Collections.Generic;
@@ -7,35 +10,73 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
-using Services;
 
 namespace Services
 {
-    public class PaymentService : IPaymentService
+    public class PaymentService : IPaymentService, IHostedService, IDisposable
     {
         private readonly IOrderService _orderService;
         private readonly IOrderDetailService _orderDetailService;
         private readonly IPaymentRepo _paymentRepo;
         private readonly IPaymentHistoryService _paymentHistoryService;
         private readonly string _checksumKey;
+        private Timer _timer;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<PaymentService> _logger;
 
         public PaymentService(
             IOrderService orderService,
             IOrderDetailService orderDetailService,
             IPaymentRepo paymentRepo,
             IConfiguration configuration,
-            IPaymentHistoryService paymentHistoryService)
+            IPaymentHistoryService paymentHistoryService,
+            IServiceScopeFactory scopeFactory,
+            ILogger<PaymentService> logger)
         {
             _orderService = orderService;
             _orderDetailService = orderDetailService;
             _paymentRepo = paymentRepo;
             _paymentHistoryService = paymentHistoryService;
             _checksumKey = configuration["Environment:PAYOS_CHECKSUM_KEY"];
+            _scopeFactory = scopeFactory;
+            _logger = logger;
+        }
 
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("⏳ Starting Payment Status Checker...");
+            _timer = new Timer(async _ => await MarkExpiredOrdersAsFailedAsync(), null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
+            return Task.CompletedTask;
+        }
 
-            Console.WriteLine($"🔑 Loaded Checksum Key: {_checksumKey}");
-            _paymentHistoryService = paymentHistoryService;
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("⏹️ Stopping Payment Status Checker...");
+            _timer?.Change(Timeout.Infinite, 0);
+            return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
+        }
+
+        private async Task MarkExpiredOrdersAsFailedAsync()
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
+
+            var expiredOrders = await orderService.GetPendingOrdersOlderThanAsync(TimeSpan.FromMinutes(15));
+
+            foreach (var order in expiredOrders)
+            {
+                _logger.LogWarning($"⚠️ Order {order.OrderID} has exceeded 15 minutes without payment. Marking as 'Failed'.");
+
+                order.Status = "Failed";
+                await orderService.UpdateOrderAsync(order);
+            }
         }
 
         public async Task<bool> HandlePaymentWebhookAsync(PayOSWebhookRequest request)
@@ -43,13 +84,12 @@ namespace Services
             try
             {
                 long orderCode = request.data.orderCode;
-                Console.WriteLine($"🔄 Processing payment webhook for OrderCode {orderCode}");
-
+                _logger.LogInformation($"🔄 Processing payment webhook for OrderCode {orderCode}");
 
                 var order = await _orderService.GetOrderByOrderCodeAsync(orderCode);
                 if (order == null)
                 {
-                    Console.WriteLine($"❌ Order with OrderCode {orderCode} not found in the database.");
+                    _logger.LogError($"❌ Order with OrderCode {orderCode} not found.");
                     return false;
                 }
 
@@ -66,35 +106,26 @@ namespace Services
                     };
 
                     await _paymentRepo.UpdatePaymentAsync(payment);
-                    Console.WriteLine($"✅ New payment record created for Order {order.OrderID}");
+                    _logger.LogInformation($"✅ New payment record created for Order {order.OrderID}");
                 }
                 else
                 {
                     if (payment.Status == "Completed" && request.data.code == "00")
                     {
-                        Console.WriteLine($"⚠️ Payment for Order {order.OrderID} is already completed. Skipping update.");
+                        _logger.LogWarning($"⚠️ Payment for Order {order.OrderID} is already completed. Skipping update.");
                         return true;
                     }
 
                     payment.Status = request.data.code == "00" ? "Completed" : "Failed";
                     await _paymentRepo.UpdatePaymentAsync(payment);
-                    Console.WriteLine($"✅ Payment record updated for Order {order.OrderID}");
+                    _logger.LogInformation($"✅ Payment record updated for Order {order.OrderID}");
                 }
 
                 await _paymentHistoryService.AddPaymentHistoryAsync(payment);
-                Console.WriteLine($"📜 Payment history recorded for Payment {payment.PaymentID}");
+                _logger.LogInformation($"📜 Payment history recorded for Payment {payment.PaymentID}");
 
-
-                if (request.data.code == "00")
-                {
-                    order.Status = "Completed";
-                    Console.WriteLine($"✅ Order {order.OrderID} status updated to 'Completed'");
-                }
-                else
-                {
-                    order.Status = "Failed";
-                    Console.WriteLine($"❌ Order {order.OrderID} status updated to 'Failed'");
-                }
+                order.Status = request.data.code == "00" ? "Completed" : "Failed";
+                _logger.LogInformation($"✅ Order {order.OrderID} status updated to '{order.Status}'");
 
                 await _orderService.UpdateOrderAsync(order);
 
@@ -102,61 +133,50 @@ namespace Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ [ERROR] Failed to process payment webhook for Order {request.data.orderCode}: {ex.Message}\nStackTrace: {ex.StackTrace}");
+                _logger.LogError($"❌ Error processing payment webhook: {ex.Message}");
                 return false;
             }
         }
-
 
         public bool VerifySignature(PayOSWebhookRequest request)
         {
             try
             {
-                Console.WriteLine($"🔍 Verifying Signature for Order {request.data.orderCode}...");
+                _logger.LogInformation($"🔍 Verifying Signature for Order {request.data.orderCode}...");
 
-                // ✅ Convert all request data into a sorted dictionary
                 var sortedData = new SortedDictionary<string, string>();
-
-                // ✅ Extract all fields dynamically (handles missing or extra fields)
                 var dataProperties = request.data.GetType().GetProperties();
                 foreach (var prop in dataProperties)
                 {
                     var value = prop.GetValue(request.data, null)?.ToString() ?? "";
-
-                    // ✅ JSON-encode arrays and objects properly
                     if (value.StartsWith("[") || value.StartsWith("{"))
                     {
                         value = JsonSerializer.Serialize(value);
                     }
-
                     sortedData[prop.Name] = value;
                 }
 
-                // ✅ Convert dictionary to the signature string format
                 string dataString = string.Join("&", sortedData.Select(kv => $"{kv.Key}={kv.Value}"));
-                Console.WriteLine($"📝 Data String for Signature: {dataString}");
+                _logger.LogInformation($"📝 Data String for Signature: {dataString}");
 
-                // ✅ Compute HMAC SHA256 hash
                 using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_checksumKey.Trim()));
                 byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataString));
                 string computedSignature = BitConverter.ToString(hash).Replace("-", "").ToLower();
 
-                // ✅ Compare computed signature with received signature
                 string receivedSignature = request.signature?.Trim().ToLower();
                 bool isValid = computedSignature == receivedSignature;
 
-                Console.WriteLine($"🔐 Computed Signature: {computedSignature}");
-                Console.WriteLine($"📩 Received Signature: {receivedSignature}");
-                Console.WriteLine($"✅ Signature Match: {isValid}");
+                _logger.LogInformation($"🔐 Computed Signature: {computedSignature}");
+                _logger.LogInformation($"📩 Received Signature: {receivedSignature}");
+                _logger.LogInformation($"✅ Signature Match: {isValid}");
 
                 return isValid;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Signature Verification Error: {ex.Message}");
+                _logger.LogError($"❌ Signature Verification Error: {ex.Message}");
                 return false;
             }
         }
-
     }
 }

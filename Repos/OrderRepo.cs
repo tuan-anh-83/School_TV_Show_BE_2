@@ -41,5 +41,9 @@ namespace Repos
         {
             return await OrderDAO.Instance.GetOrderStatisticsAsync(startDate, endDate, interval);
         }
+        public async Task<IEnumerable<Order>> GetPendingOrdersOlderThanAsync(TimeSpan timeSpan)
+        {
+            return await OrderDAO.Instance.GetPendingOrdersOlderThanAsync(timeSpan);
+        }
     }
 }
