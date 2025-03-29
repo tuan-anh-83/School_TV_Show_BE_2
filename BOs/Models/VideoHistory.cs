@@ -10,7 +10,7 @@ namespace BOs.Models
     public class VideoHistory
     {
         public int VideoHistoryID { get; set; }
-        public int? ProgramID { get; set; }
+        public int ProgramID { get; set; }
 
         [Required]
         [MaxLength(500)]

@@ -16,5 +16,6 @@ namespace Repos
         Task<(int totalViews, int totalLikes)> GetTotalViewsAndLikesAsync();
         Task<int> CountByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<int> CountTotalVideosAsync();
+        Task<VideoHistory?> GetLatestLiveStreamByProgramIdAsync(int programId);
     }
 }

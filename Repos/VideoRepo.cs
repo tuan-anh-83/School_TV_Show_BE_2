@@ -35,7 +35,7 @@ namespace Repos
 
         public async Task<IEnumerable<VideoHistory>> GetAllAsync()
         {
-            return await VideoDAO.Instance.GetAllAsync();
+            return await VideoDAO.Instance.GetAllVideosAsync();
         }
 
         public async Task<int> CountByStatusAsync(bool status)
@@ -56,6 +56,11 @@ namespace Repos
         public async Task<int> CountTotalVideosAsync()
         {
             return await VideoDAO.Instance.CountTotalVideosAsync();
+        }
+        
+        public async Task<VideoHistory?> GetLatestLiveStreamByProgramIdAsync(int programId)
+        {
+            return await VideoDAO.Instance.GetLatestLiveStreamByProgramIdAsync(programId);
         }
     }
 }

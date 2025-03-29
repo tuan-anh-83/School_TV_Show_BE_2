@@ -44,6 +44,7 @@ namespace BOs.Data
         public DbSet<CategoryNews> CategoryNews { get; set; }
         public DbSet<ProgramFollow> ProgramFollows { get; set; }
         public DbSet<PaymentHistory> PaymentHistories { get; set; }
+        public DbSet<AdSchedule> AdSchedules { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer(GetConnectionString());
@@ -214,14 +215,9 @@ namespace BOs.Data
                       .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(s => s.VideoHistory)
-                      .WithMany()
+                      .WithMany(v => v.Schedules) 
                       .HasForeignKey(s => s.VideoHistoryID)
-                      .OnDelete(DeleteBehavior.SetNull);
-
-                entity.HasOne(s => s.VideoHistory)
-                      .WithMany()
-                      .HasForeignKey(s => s.SourceVideoHistoryID)
-                      .OnDelete(DeleteBehavior.SetNull);
+                      .OnDelete(DeleteBehavior.NoAction);
             });
             #endregion
 
@@ -256,7 +252,7 @@ namespace BOs.Data
                 entity.HasMany(e => e.VideoHistories)
                       .WithOne(vh => vh.Program)
                       .HasForeignKey(vh => vh.ProgramID)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.NoAction);
             });
             #endregion
 
@@ -592,6 +588,25 @@ namespace BOs.Data
                       .HasForeignKey(e => e.PaymentID)
                       .OnDelete(DeleteBehavior.NoAction);
             });
+            #endregion
+
+
+            #region AdSchedule
+
+            modelBuilder.Entity<AdSchedule>(entity =>
+            {
+                entity.ToTable("AdSchedule");
+                entity.HasKey(e => e.AdScheduleID);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.StartTime).IsRequired();
+                entity.Property(e => e.EndTime).IsRequired();
+                entity.Property(e => e.VideoUrl).IsRequired();
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("GETDATE()");
+            });
+
+
             #endregion
         }
 

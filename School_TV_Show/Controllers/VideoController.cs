@@ -147,6 +147,25 @@ namespace School_TV_Show.Controllers
                 video.PlaybackUrl
             });
         }
+
+        [HttpGet("program/{programId}/latest-live")]
+        [Authorize(Roles = "SchoolOwner")]
+        public async Task<IActionResult> GetLatestLiveByProgramId(int programId)
+        {
+            var video = await _videoService.GetLatestLiveStreamByProgramIdAsync(programId);
+            if (video == null || string.IsNullOrEmpty(video.URL))
+                return NotFound(new { message = "No active livestream found for this program." });
+
+            return Ok(new
+            {
+                video.VideoHistoryID,
+                video.URL,
+                video.PlaybackUrl,
+                video.Type,
+                video.Status,
+                video.CreatedAt
+            });
+        }
     }
 
 }

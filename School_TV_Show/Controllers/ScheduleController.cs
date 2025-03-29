@@ -12,210 +12,183 @@ namespace School_TV_Show.Controllers
     public class ScheduleController : ControllerBase
     {
         private readonly IScheduleService _scheduleService;
-        private readonly IProgramService _programService;
+        private readonly IVideoService _videoHistoryService;
 
-        public ScheduleController(IScheduleService scheduleService, IProgramService programService)
+        public ScheduleController(IScheduleService scheduleService, IVideoService videoHistoryService)
         {
             _scheduleService = scheduleService;
-            _programService = programService;
+            _videoHistoryService = videoHistoryService;
+        }
+        [HttpPost("manual-replay")]
+        [Authorize(Roles = "SchoolOwner,Admin")]
+        public async Task<IActionResult> CreateManualReplaySchedule([FromBody] CreateReplayScheduleRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ApiResponse(false, "Invalid request"));
+
+            var start = request.StartTime ?? DateTime.UtcNow;
+            var end = request.EndTime ?? start.AddMinutes(5);
+
+            var schedule = new Schedule
+            {
+                ProgramID = request.ProgramID,
+                StartTime = start,
+                EndTime = end,
+                Status = "Active",
+                Mode = "replay",
+
+            };
+
+            var result = await _scheduleService.CreateScheduleAsync(schedule);
+
+            if (schedule == null)
+                return StatusCode(500, new ApiResponse(false, "Failed to create replay schedule"));
+
+            return Ok(new ApiResponse(true, "Replay scheduled successfully", new
+            {
+                schedule.ScheduleID,
+                schedule.ProgramID,
+                schedule.Mode,
+                schedule.StartTime,
+                schedule.EndTime
+            }));
         }
 
-        [Authorize(Roles = "Admin")]
+        [HttpPost("replay")]
+        public async Task<IActionResult> CreateReplaySchedule([FromBody] CreateReplayScheduleRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ApiResponse(false, "Invalid input"));
+
+            var start = request.StartTime ?? DateTime.UtcNow;
+            var end = request.EndTime ?? start.AddMinutes(5);
+
+            var schedule = new Schedule
+            {
+                ProgramID = request.ProgramID,
+                StartTime = start,
+                EndTime = end,
+                Mode = "replay",
+                Status = "Active",
+            };
+
+            var success = await _scheduleService.CreateScheduleAsync(schedule);
+            if (schedule == null)
+                return StatusCode(500, new ApiResponse(false, "Failed to create replay schedule"));
+
+            return Ok(new ApiResponse(true, "Replay schedule created", new
+            {
+                schedule.ScheduleID,
+                schedule.ProgramID,
+                schedule.StartTime,
+                schedule.EndTime,
+                schedule.Mode,
+            }));
+        }
+
+        [HttpGet("dashboard/status-counts")]
+        public async Task<IActionResult> GetScheduleDashboardStatusCounts()
+        {
+            var counts = await _scheduleService.GetScheduleCountByStatusAsync();
+            return Ok(new ApiResponse(true, "Schedule status summary", counts));
+        }
+
         [HttpGet("all")]
         public async Task<IActionResult> GetAllSchedules()
         {
             var schedules = await _scheduleService.GetAllSchedulesAsync();
-            if (!schedules.Any())
-                return NotFound(new { message = "No schedules found." });
-
-            var response = schedules.Select(s => new ScheduleResponse
-            {
-                ScheduleID = s.ScheduleID,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                Status = s.Status,
-                Mode = s.Mode,
-                SourceVideoHistoryID = s.SourceVideoHistoryID
-            });
-
-            return Ok(response);
+            return Ok(new ApiResponse(true, "All schedules", schedules));
         }
 
-        [Authorize(Roles = "User,SchoolOwner,Admin")]
-        [HttpGet("active")]
-        public async Task<IActionResult> GetActiveSchedules()
-        {
-            var activeSchedules = await _scheduleService.GetActiveSchedulesAsync();
-            if (!activeSchedules.Any())
-                return NotFound(new { message = "No active schedules found." });
-
-            var response = activeSchedules.Select(s => new ScheduleResponse
-            {
-                ScheduleID = s.ScheduleID,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                Status = s.Status,
-                Mode = s.Mode,
-                SourceVideoHistoryID = s.SourceVideoHistoryID
-            });
-            return Ok(response);
-        }
-
-        [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetScheduleById(int id)
         {
             var schedule = await _scheduleService.GetScheduleByIdAsync(id);
             if (schedule == null)
-                return NotFound(new { message = "Schedule not found." });
+                return NotFound(new ApiResponse(false, "Schedule not found"));
 
-            var response = new ScheduleResponse
-            {
-                ScheduleID = schedule.ScheduleID,
-                StartTime = schedule.StartTime,
-                EndTime = schedule.EndTime,
-                Status = schedule.Status,
-                Mode = schedule.Mode,
-                SourceVideoHistoryID = schedule.SourceVideoHistoryID
-            };
-
-            return Ok(response);
+            return Ok(new ApiResponse(true, "Schedule found", schedule));
         }
 
-        [Authorize(Roles = "SchoolOwner")]
         [HttpPost]
         public async Task<IActionResult> CreateSchedule([FromBody] CreateScheduleRequest request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            if (request.StartTime >= request.EndTime)
-                return BadRequest(new { error = "Start Time must be earlier than End Time." });
+                return BadRequest(new ApiResponse(false, "Invalid input"));
 
             var schedule = new Schedule
             {
                 ProgramID = request.ProgramID,
                 StartTime = request.StartTime,
                 EndTime = request.EndTime,
-                Status = "Active",
-                Mode = request.Mode ?? "live",
-                SourceVideoHistoryID = request.SourceVideoHistoryID
+                Mode = request.Mode,
+                Status = "Pending",
             };
 
-            var createdSchedule = await _scheduleService.CreateScheduleAsync(schedule);
-
-            var response = new ScheduleResponse
-            {
-                ScheduleID = createdSchedule.ScheduleID,
-                StartTime = createdSchedule.StartTime,
-                EndTime = createdSchedule.EndTime,
-                Status = createdSchedule.Status,
-                Mode = createdSchedule.Mode,
-                SourceVideoHistoryID = createdSchedule.SourceVideoHistoryID
-            };
-
-            return CreatedAtAction(nameof(GetScheduleById), new { id = createdSchedule.ScheduleID }, response);
+            var created = await _scheduleService.CreateScheduleAsync(schedule);
+            return Ok(new ApiResponse(true, "Schedule created", new { scheduleId = created.ScheduleID }));
         }
 
-        [Authorize(Roles = "SchoolOwner")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateSchedule(int id, [FromBody] UpdateScheduleRequest request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest(new ApiResponse(false, "Invalid input"));
 
             var existingSchedule = await _scheduleService.GetScheduleByIdAsync(id);
             if (existingSchedule == null)
-                return NotFound(new { message = "Schedule not found." });
+                return NotFound(new ApiResponse(false, "Schedule not found"));
 
-            if (!existingSchedule.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new { error = "Only active schedules can be updated." });
+            if (!existingSchedule.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new ApiResponse(false, "Only 'Pending' schedules can be updated"));
 
             existingSchedule.StartTime = request.StartTime;
             existingSchedule.EndTime = request.EndTime;
+            existingSchedule.Mode = request.Mode;
 
             var updated = await _scheduleService.UpdateScheduleAsync(existingSchedule);
             if (!updated)
-                return StatusCode(500, new { error = "Failed to update schedule." });
+                return StatusCode(500, new ApiResponse(false, "Failed to update schedule"));
 
-            return Ok(new { message = "Schedule updated successfully." });
+            return Ok(new ApiResponse(true, "Schedule updated successfully"));
         }
 
-        [Authorize(Roles = "SchoolOwner,Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSchedule(int id)
         {
             var schedule = await _scheduleService.GetScheduleByIdAsync(id);
             if (schedule == null)
-                return NotFound(new { message = "Schedule not found." });
+                return NotFound(new ApiResponse(false, "Schedule not found"));
+
+            if (!schedule.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new ApiResponse(false, "Only 'Pending' schedules can be deleted"));
 
             var deleted = await _scheduleService.DeleteScheduleAsync(id);
             if (!deleted)
-                return StatusCode(500, new { error = "Failed to delete schedule." });
+                return StatusCode(500, new ApiResponse(false, "Failed to delete schedule"));
 
-            return Ok(new { message = "Schedule deleted successfully." });
+            return Ok(new ApiResponse(true, "Schedule deleted successfully"));
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("dashboard/totalSchedules")]
-        public async Task<IActionResult> GetTotalSchedules()
+        [HttpGet("status/{status}")]
+        public async Task<IActionResult> GetSchedulesByStatus(string status)
         {
-            var totalSchedules = await _scheduleService.CountSchedulesAsync();
-            return Ok(new { totalSchedules });
+            var result = await _scheduleService.GetSchedulesByStatusAsync(status);
+            return Ok(new ApiResponse(true, $"Schedules with status '{status}'", result));
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("dashboard/activeSchedules")]
-        public async Task<IActionResult> GetActiveSchedulesCount()
+        [HttpGet("count-by-status/{status}")]
+        public async Task<IActionResult> GetScheduleCountByStatus(string status)
         {
-            var activeSchedules = await _scheduleService.CountSchedulesByStatusAsync("Active");
-            return Ok(new { activeSchedules });
+            var count = await _scheduleService.CountSchedulesByStatusAsync(status);
+            return Ok(new ApiResponse(true, $"Count of schedules with status '{status}'", new { status, count }));
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("dashboard/schedulesByStatus")]
-        public async Task<IActionResult> GetSchedulesByStatus()
+        [HttpGet("count-by-status")]
+        public async Task<IActionResult> GetScheduleCountsByStatus()
         {
             var result = await _scheduleService.GetScheduleCountByStatusAsync();
-            return Ok(result);
-        }
-
-        [AllowAnonymous]
-        [HttpGet("now-playing")]
-        public async Task<IActionResult> GetNowPlayingSchedule()
-        {
-            var now = DateTime.UtcNow;
-
-            var schedules = await _scheduleService.GetAllSchedulesAsync();
-            var current = schedules
-                .Where(s => s.Mode == "replay"
-                    && s.SourceVideoHistoryID.HasValue
-                    && s.StartTime <= now
-                    && s.EndTime >= now
-                    && s.Status == "Active")
-                .FirstOrDefault();
-
-            if (current == null)
-                return NotFound(new { message = "Rigth now there is schedul for playback video." });
-
-            var video = current.VideoHistory ?? current.Program?.VideoHistories
-                ?.FirstOrDefault(v => v.VideoHistoryID == current.SourceVideoHistoryID.Value);
-
-            if (video == null || string.IsNullOrEmpty(video.PlaybackUrl))
-                return NotFound(new { message = "There is no video." });
-
-            return Ok(new
-            {
-                scheduleId = current.ScheduleID,
-                programId = current.ProgramID,
-                sourceVideoId = current.SourceVideoHistoryID,
-                playbackUrl = video.PlaybackUrl,
-                description = video.Description,
-                startTime = current.StartTime,
-                endTime = current.EndTime,
-                mode = current.Mode,
-                type = "replay"
-            });
+            return Ok(new ApiResponse(true, "All status counts", result));
         }
     }
 }

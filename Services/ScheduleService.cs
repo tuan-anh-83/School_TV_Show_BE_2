@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Services
 {
-    public class ScheduleService :IScheduleService
+    public class ScheduleService : IScheduleService
     {
         private readonly IScheduleRepo _scheduleRepository;
 
@@ -21,9 +21,6 @@ namespace Services
         {
             if (schedule.StartTime >= schedule.EndTime)
                 throw new Exception("StartTime must be earlier than EndTime.");
-
-            if (string.IsNullOrWhiteSpace(schedule.Status))
-                schedule.Status = "Active";
 
             return await _scheduleRepository.CreateScheduleAsync(schedule);
         }
@@ -51,18 +48,11 @@ namespace Services
 
         public async Task<bool> DeleteScheduleAsync(int scheduleId)
         {
-            var schedule = await _scheduleRepository.GetScheduleByIdAsync(scheduleId);
-            if (schedule == null)
-                throw new Exception("Schedule not found.");
-
             return await _scheduleRepository.DeleteScheduleAsync(scheduleId);
         }
 
         public async Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime)
         {
-            if (startTime >= endTime)
-                throw new Exception("StartTime must be earlier than EndTime.");
-
             return await _scheduleRepository.SearchSchedulesByTimeAsync(startTime, endTime);
         }
 
@@ -80,7 +70,6 @@ namespace Services
             var schedules = await _scheduleRepository.GetAllSchedulesAsync();
             return schedules.Count(s => s.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
         }
-
         public async Task<Dictionary<string, int>> GetScheduleCountByStatusAsync()
         {
             var schedules = await _scheduleRepository.GetAllSchedulesAsync();
@@ -88,10 +77,17 @@ namespace Services
                 .GroupBy(s => s.Status)
                 .ToDictionary(g => g.Key, g => g.Count());
         }
+
         public async Task<IEnumerable<Schedule>> GetActiveSchedulesAsync()
         {
             return await _scheduleRepository.GetActiveSchedulesAsync();
         }
+        public async Task<IEnumerable<Schedule>> GetSchedulesByStatusAsync(string status)
+        {
+            return (await _scheduleRepository.GetAllSchedulesAsync())
+                   .Where(s => s.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+        }
 
     }
+
 }

@@ -29,6 +29,11 @@ namespace Services
             return await _videoRepo.GetVideoByIdAsync(videoHistoryId);
         }
 
+        public async Task<VideoHistory?> GetLatestLiveStreamByProgramIdAsync(int programId)
+        {
+            return await _videoRepo.GetLatestLiveStreamByProgramIdAsync(programId);
+        }
+
         public async Task<bool> AddVideoAsync(VideoHistory videoHistory)
         {
             var result = await _videoRepo.AddVideoAsync(videoHistory);
@@ -59,25 +64,21 @@ namespace Services
             return result;
         }
 
-        //  Tổng số video history
         public async Task<int> GetTotalVideosAsync()
         {
             return await _videoRepo.CountTotalVideosAsync();
         }
 
-        //  Tổng số video theo trạng thái (true = Active, false = Inactive)
         public async Task<int> GetTotalVideosByStatusAsync(bool status)
         {
             return await _videoRepo.CountByStatusAsync(status);
         }
 
-        // Tổng lượt xem và lượt thích trên tất cả video
         public async Task<(int totalViews, int totalLikes)> GetTotalViewsAndLikesAsync()
         {
             return await _videoRepo.GetTotalViewsAndLikesAsync();
         }
 
-        //  Tổng số video trong khoảng thời gian
         public async Task<int> GetVideosByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             return await _videoRepo.CountByDateRangeAsync(startDate, endDate);

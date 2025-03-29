@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BOs.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250319101728_UpdateRela3")]
-    partial class UpdateRela3
+    [Migration("20250329061130_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -96,6 +96,61 @@ namespace BOs.Migrations
                     b.ToTable("Account", (string)null);
                 });
 
+            modelBuilder.Entity("BOs.Models.AdSchedule", b =>
+                {
+                    b.Property<int>("AdScheduleID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AdScheduleID"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("VideoUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("AdScheduleID");
+
+                    b.ToTable("AdSchedule", (string)null);
+                });
+
+            modelBuilder.Entity("BOs.Models.CategoryNews", b =>
+                {
+                    b.Property<int>("CategoryNewsID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoryNewsID"));
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("CategoryNewsID");
+
+                    b.ToTable("CategoryNews", (string)null);
+                });
+
             modelBuilder.Entity("BOs.Models.Comment", b =>
                 {
                     b.Property<int>("CommentID")
@@ -132,33 +187,6 @@ namespace BOs.Migrations
                     b.ToTable("Comment", (string)null);
                 });
 
-            modelBuilder.Entity("BOs.Models.Follow", b =>
-                {
-                    b.Property<int>("AccountID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SchoolChannelID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("FollowedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasDefaultValue("Followed");
-
-                    b.HasKey("AccountID", "SchoolChannelID");
-
-                    b.HasIndex("SchoolChannelID");
-
-                    b.ToTable("Follow", (string)null);
-                });
-
             modelBuilder.Entity("BOs.Models.News", b =>
                 {
                     b.Property<int>("NewsID")
@@ -166,6 +194,9 @@ namespace BOs.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NewsID"));
+
+                    b.Property<int>("CategoryNewsID")
+                        .HasColumnType("int");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -199,6 +230,8 @@ namespace BOs.Migrations
 
                     b.HasKey("NewsID");
 
+                    b.HasIndex("CategoryNewsID");
+
                     b.HasIndex("SchoolChannelID");
 
                     b.ToTable("News", (string)null);
@@ -214,7 +247,8 @@ namespace BOs.Migrations
 
                     b.Property<string>("ContentType")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<byte[]>("FileData")
                         .IsRequired()
@@ -222,7 +256,8 @@ namespace BOs.Migrations
 
                     b.Property<string>("FileName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<int>("NewsID")
                         .HasColumnType("int");
@@ -231,7 +266,7 @@ namespace BOs.Migrations
 
                     b.HasIndex("NewsID");
 
-                    b.ToTable("NewsPictures");
+                    b.ToTable("NewsPicture", (string)null);
                 });
 
             modelBuilder.Entity("BOs.Models.Order", b =>
@@ -250,6 +285,9 @@ namespace BOs.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETDATE()");
 
+                    b.Property<long>("OrderCode")
+                        .HasColumnType("BIGINT");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -261,11 +299,14 @@ namespace BOs.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnUpdate()
                         .HasColumnType("datetime2")
-                        .HasComputedColumnSql("GETDATE()");
+                        .HasDefaultValueSql("GETDATE()");
 
                     b.HasKey("OrderID");
 
                     b.HasIndex("AccountID");
+
+                    b.HasIndex("OrderCode")
+                        .IsUnique();
 
                     b.ToTable("Order", (string)null);
                 });
@@ -309,7 +350,7 @@ namespace BOs.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
+                        .HasColumnType("datetime")
                         .HasDefaultValueSql("GETDATE()");
 
                     b.Property<string>("Description")
@@ -331,13 +372,14 @@ namespace BOs.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(max)")
-                        .HasDefaultValue("True");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Active");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnUpdate()
-                        .HasColumnType("datetime2")
-                        .HasComputedColumnSql("GETDATE()");
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
 
                     b.HasKey("PackageID");
 
@@ -396,17 +438,54 @@ namespace BOs.Migrations
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasDefaultValue("Unknown");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Pending");
 
                     b.HasKey("PaymentID");
 
                     b.HasIndex("OrderID");
 
                     b.ToTable("Payment", (string)null);
+                });
+
+            modelBuilder.Entity("BOs.Models.PaymentHistory", b =>
+                {
+                    b.Property<int>("PaymentHistoryID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PaymentHistoryID"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PaymentID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.HasKey("PaymentHistoryID");
+
+                    b.HasIndex("PaymentID");
+
+                    b.ToTable("PaymentHistory", (string)null);
                 });
 
             modelBuilder.Entity("BOs.Models.Program", b =>
@@ -416,6 +495,10 @@ namespace BOs.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProgramID"));
+
+                    b.Property<string>("CloudflareStreamId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -455,6 +538,39 @@ namespace BOs.Migrations
                     b.HasIndex("SchoolChannelID");
 
                     b.ToTable("Program", (string)null);
+                });
+
+            modelBuilder.Entity("BOs.Models.ProgramFollow", b =>
+                {
+                    b.Property<int>("ProgramFollowID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProgramFollowID"));
+
+                    b.Property<int>("AccountID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FollowedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("ProgramID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.HasKey("ProgramFollowID");
+
+                    b.HasIndex("AccountID");
+
+                    b.HasIndex("ProgramID");
+
+                    b.ToTable("ProgramFollow", (string)null);
                 });
 
             modelBuilder.Entity("BOs.Models.Report", b =>
@@ -536,6 +652,22 @@ namespace BOs.Migrations
                     b.Property<DateTime>("EndTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("LiveStreamEnded")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("LiveStreamStarted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("Live");
+
                     b.Property<int>("ProgramID")
                         .HasColumnType("int");
 
@@ -545,12 +677,18 @@ namespace BOs.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Active");
+
+                    b.Property<int?>("VideoHistoryID")
+                        .HasColumnType("int");
 
                     b.HasKey("ScheduleID");
 
                     b.HasIndex("ProgramID");
+
+                    b.HasIndex("VideoHistoryID");
 
                     b.ToTable("Schedule", (string)null);
                 });
@@ -607,6 +745,33 @@ namespace BOs.Migrations
                     b.ToTable("SchoolChannel", (string)null);
                 });
 
+            modelBuilder.Entity("BOs.Models.SchoolChannelFollow", b =>
+                {
+                    b.Property<int>("AccountID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SchoolChannelID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FollowedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasDefaultValue("Followed");
+
+                    b.HasKey("AccountID", "SchoolChannelID");
+
+                    b.HasIndex("SchoolChannelID");
+
+                    b.ToTable("SchoolChannelFollow", (string)null);
+                });
+
             modelBuilder.Entity("BOs.Models.Share", b =>
                 {
                     b.Property<int>("ShareID")
@@ -641,6 +806,10 @@ namespace BOs.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VideoHistoryID"));
 
+                    b.Property<string>("CloudflareStreamId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
@@ -650,6 +819,13 @@ namespace BOs.Migrations
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("MP4Url")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PlaybackUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("ProgramID")
                         .HasColumnType("int");
@@ -761,32 +937,21 @@ namespace BOs.Migrations
                     b.Navigation("VideoHistory");
                 });
 
-            modelBuilder.Entity("BOs.Models.Follow", b =>
-                {
-                    b.HasOne("BOs.Models.Account", "Account")
-                        .WithMany("Follows")
-                        .HasForeignKey("AccountID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BOs.Models.SchoolChannel", "SchoolChannel")
-                        .WithMany("Followers")
-                        .HasForeignKey("SchoolChannelID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-
-                    b.Navigation("SchoolChannel");
-                });
-
             modelBuilder.Entity("BOs.Models.News", b =>
                 {
+                    b.HasOne("BOs.Models.CategoryNews", "CategoryNews")
+                        .WithMany("News")
+                        .HasForeignKey("CategoryNewsID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("BOs.Models.SchoolChannel", "SchoolChannel")
                         .WithMany("News")
                         .HasForeignKey("SchoolChannelID")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CategoryNews");
 
                     b.Navigation("SchoolChannel");
                 });
@@ -818,13 +983,13 @@ namespace BOs.Migrations
                     b.HasOne("BOs.Models.Order", "Order")
                         .WithMany("OrderDetails")
                         .HasForeignKey("OrderID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("BOs.Models.Package", "Package")
                         .WithMany("OrderDetails")
                         .HasForeignKey("PackageID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Order");
@@ -846,12 +1011,23 @@ namespace BOs.Migrations
             modelBuilder.Entity("BOs.Models.Payment", b =>
                 {
                     b.HasOne("BOs.Models.Order", "Order")
-                        .WithMany()
+                        .WithMany("Payments")
                         .HasForeignKey("OrderID")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("BOs.Models.PaymentHistory", b =>
+                {
+                    b.HasOne("BOs.Models.Payment", "Payment")
+                        .WithMany("PaymentHistories")
+                        .HasForeignKey("PaymentID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("BOs.Models.Program", b =>
@@ -863,6 +1039,25 @@ namespace BOs.Migrations
                         .IsRequired();
 
                     b.Navigation("SchoolChannel");
+                });
+
+            modelBuilder.Entity("BOs.Models.ProgramFollow", b =>
+                {
+                    b.HasOne("BOs.Models.Account", "Account")
+                        .WithMany("ProgramFollows")
+                        .HasForeignKey("AccountID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BOs.Models.Program", "Program")
+                        .WithMany("ProgramFollows")
+                        .HasForeignKey("ProgramID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Program");
                 });
 
             modelBuilder.Entity("BOs.Models.Report", b =>
@@ -886,13 +1081,20 @@ namespace BOs.Migrations
 
             modelBuilder.Entity("BOs.Models.Schedule", b =>
                 {
-                    b.HasOne("BOs.Models.Program", "Programs")
+                    b.HasOne("BOs.Models.Program", "Program")
                         .WithMany("Schedules")
                         .HasForeignKey("ProgramID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Programs");
+                    b.HasOne("BOs.Models.VideoHistory", "VideoHistory")
+                        .WithMany("Schedules")
+                        .HasForeignKey("VideoHistoryID")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Program");
+
+                    b.Navigation("VideoHistory");
                 });
 
             modelBuilder.Entity("BOs.Models.SchoolChannel", b =>
@@ -904,6 +1106,25 @@ namespace BOs.Migrations
                         .IsRequired();
 
                     b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("BOs.Models.SchoolChannelFollow", b =>
+                {
+                    b.HasOne("BOs.Models.Account", "Account")
+                        .WithMany("Follows")
+                        .HasForeignKey("AccountID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BOs.Models.SchoolChannel", "SchoolChannel")
+                        .WithMany("Followers")
+                        .HasForeignKey("SchoolChannelID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("SchoolChannel");
                 });
 
             modelBuilder.Entity("BOs.Models.Share", b =>
@@ -930,7 +1151,7 @@ namespace BOs.Migrations
                     b.HasOne("BOs.Models.Program", "Program")
                         .WithMany("VideoHistories")
                         .HasForeignKey("ProgramID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Program");
@@ -972,7 +1193,14 @@ namespace BOs.Migrations
 
                     b.Navigation("PasswordResetTokens");
 
+                    b.Navigation("ProgramFollows");
+
                     b.Navigation("VideoLikes");
+                });
+
+            modelBuilder.Entity("BOs.Models.CategoryNews", b =>
+                {
+                    b.Navigation("News");
                 });
 
             modelBuilder.Entity("BOs.Models.News", b =>
@@ -983,6 +1211,8 @@ namespace BOs.Migrations
             modelBuilder.Entity("BOs.Models.Order", b =>
                 {
                     b.Navigation("OrderDetails");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("BOs.Models.Package", b =>
@@ -990,8 +1220,15 @@ namespace BOs.Migrations
                     b.Navigation("OrderDetails");
                 });
 
+            modelBuilder.Entity("BOs.Models.Payment", b =>
+                {
+                    b.Navigation("PaymentHistories");
+                });
+
             modelBuilder.Entity("BOs.Models.Program", b =>
                 {
+                    b.Navigation("ProgramFollows");
+
                     b.Navigation("Schedules");
 
                     b.Navigation("VideoHistories");
@@ -1006,6 +1243,8 @@ namespace BOs.Migrations
 
             modelBuilder.Entity("BOs.Models.VideoHistory", b =>
                 {
+                    b.Navigation("Schedules");
+
                     b.Navigation("VideoLikes");
 
                     b.Navigation("VideoViews");

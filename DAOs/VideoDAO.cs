@@ -46,6 +46,14 @@ namespace DAOs
                 .FirstOrDefaultAsync(vh => vh.VideoHistoryID == videoHistoryId && vh.Status);
         }
 
+        public async Task<VideoHistory?> GetLatestLiveStreamByProgramIdAsync(int programId)
+        {
+            return await _context.VideoHistories
+                .Where(vh => vh.ProgramID == programId && vh.Type == "Live" && vh.Status)
+                .OrderByDescending(vh => vh.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<bool> AddVideoAsync(VideoHistory videoHistory)
         {
             try
@@ -72,7 +80,6 @@ namespace DAOs
             if (existingVideo == null)
                 return false;
 
-            // Update properties
             existingVideo.URL = videoHistory.URL;
             existingVideo.Type = videoHistory.Type;
             existingVideo.Description = videoHistory.Description;
@@ -113,22 +120,11 @@ namespace DAOs
             }
         }
 
-        //  Lấy tất cả VideoHistory
-        public async Task<IEnumerable<VideoHistory>> GetAllAsync()
-        {
-            return await _context.VideoHistories
-                .Include(v => v.VideoViews)
-                .Include(v => v.VideoLikes)
-                .ToListAsync();
-        }
-
-        //  Đếm số video theo trạng thái
         public async Task<int> CountByStatusAsync(bool status)
         {
             return await _context.VideoHistories.CountAsync(v => v.Status == status);
         }
 
-        //  Tổng lượt xem và lượt thích trên tất cả video
         public async Task<(int totalViews, int totalLikes)> GetTotalViewsAndLikesAsync()
         {
             int totalViews = await _context.VideoHistories.SumAsync(v => v.VideoViews.Count);
@@ -136,7 +132,6 @@ namespace DAOs
             return (totalViews, totalLikes);
         }
 
-        // 🟢 Đếm số video theo khoảng thời gian
         public async Task<int> CountByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             return await _context.VideoHistories.CountAsync(v => v.CreatedAt >= startDate && v.CreatedAt <= endDate);

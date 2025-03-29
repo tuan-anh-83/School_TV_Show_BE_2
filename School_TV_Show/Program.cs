@@ -86,6 +86,8 @@ builder.Services.AddScoped<IOrderDetailRepo, OrderDetailRepo>();
 builder.Services.AddScoped<INewsRepo, NewsRepo>();
 builder.Services.AddScoped<ISchoolChannelFollowRepo, SchoolChannelFollowRepo>();
 builder.Services.AddScoped<IPaymentHistoryRepo, PaymentHistoryRepo>();
+builder.Services.AddScoped<IAdScheduleRepo, AdScheduleRepo>();
+builder.Services.AddScoped<ILiveStreamRepo, LiveStreamRepo>();
 
 // Services
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -106,14 +108,15 @@ builder.Services.AddScoped<IVideoLikeService, VideoLikeService>();
 builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
-//builder.Services.AddHttpClient<ILiveStreamService, LiveStreamService>();
+builder.Services.AddHttpClient<ILiveStreamService, LiveStreamService>();
 builder.Services.AddScoped<ISchoolChannelFollowService, SchoolChannelFollowService>();
 builder.Services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
 builder.Services.AddHostedService<PendingAccountReminderService>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 //builder.Services.AddSingleton<OrderTrackingService>();
-//builder.Services.AddHostedService<LiveStreamScheduler>();
+builder.Services.AddHostedService<LiveStreamScheduler>();
+builder.Services.AddScoped<IAdScheduleService, AdScheduleService>();
 
 
 builder.Services.AddDistributedMemoryCache();

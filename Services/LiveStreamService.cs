@@ -1,330 +1,262 @@
-﻿//using BOs.Models;
-//using Microsoft.Extensions.Logging;
-//using Microsoft.Extensions.Options;
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Net.Http.Headers;
-//using System.Text;
-//using System.Text.Json;
-//using System.Threading.Tasks;
+﻿using BOs.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Repos;
 
-//namespace Services
-//{
-//    public class LiveStreamService : ILiveStreamService
-//    {
-//        private readonly DataContext _context;
-//        private readonly HttpClient _httpClient;
-//        private readonly ILogger<LiveStreamService> _logger;
-//        private readonly CloudflareSettings _cloudflareSettings;
+namespace Services
+{
+    public class LiveStreamService : ILiveStreamService
+    {
+        private readonly ILiveStreamRepo _repository;
+        private readonly HttpClient _httpClient;
+        private readonly ILogger<LiveStreamService> _logger;
+        private readonly CloudflareSettings _cloudflareSettings;
 
-//        public LiveStreamService(
-//            TVSContext context,
-//            HttpClient httpClient,
-//            ILogger<LiveStreamService> logger,
-//            IOptions<CloudflareSettings> cloudflareSettings)
-//        {
-//            _context = context;
-//            _httpClient = httpClient;
-//            _logger = logger;
-//            _cloudflareSettings = cloudflareSettings.Value;
+        public LiveStreamService(
+            ILiveStreamRepo repository,
+            HttpClient httpClient,
+            ILogger<LiveStreamService> logger,
+            IOptions<CloudflareSettings> cloudflareSettings)
+        {
+            _repository = repository;
+            _httpClient = httpClient;
+            _logger = logger;
+            _cloudflareSettings = cloudflareSettings.Value;
 
-//            _httpClient.DefaultRequestHeaders.Authorization =
-//                new AuthenticationHeaderValue("Bearer", _cloudflareSettings.ApiToken);
-//        }
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _cloudflareSettings.ApiToken);
+        }
 
-//        public async Task<bool> SaveRecordedVideoFromWebhookAsync(string cloudflareInputUid, string downloadableUrl, string hlsUrl)
-//        {
-//            var stream = await _context.VideoHistories
-//                .FirstOrDefaultAsync(v => v.CloudflareStreamId == cloudflareInputUid);
+        public async Task<bool> SaveRecordedVideoFromWebhookAsync(string cloudflareInputUid, string downloadableUrl, string hlsUrl)
+        {
+            var existingRecorded = await _repository.GetRecordedVideoByStreamIdAsync(cloudflareInputUid);
+            if (existingRecorded != null)
+            {
+                _logger.LogWarning("Duplicate recording detected. Stream ID {Uid} already has a recorded video.", cloudflareInputUid);
+                return false;
+            }
+            var stream = await _repository.GetVideoHistoryByStreamIdAsync(cloudflareInputUid);
+            if (stream == null)
+            {
+                _logger.LogWarning("No matching stream found for CloudflareInputUID: {Uid}", cloudflareInputUid);
+                return false;
+            }
 
-//            if (stream == null)
-//            {
-//                _logger.LogWarning("No matching stream found for CloudflareInputUID: {Uid}", cloudflareInputUid);
-//                return false;
-//            }
+            stream.MP4Url = downloadableUrl;
+            stream.PlaybackUrl = hlsUrl;
+            stream.Status = false;
+            stream.UpdatedAt = DateTime.UtcNow;
+            stream.Type = "Recorded";
 
-//            stream.MP4Url = downloadableUrl;
-//            stream.PlaybackUrl = hlsUrl;
-//            stream.Status = false;
-//            stream.UpdatedAt = DateTime.UtcNow;
-//            stream.Type = "Recorded";
+            return await _repository.UpdateVideoHistoryAsync(stream);
+        }
+        public async Task<bool> StartLiveStreamAsync(VideoHistory stream)
+        {
+            var program = await _repository.GetProgramByIdAsync(stream.ProgramID);
+            if (program == null)
+            {
+                _logger.LogError("Program not found for ProgramID: {0}", stream.ProgramID);
+                return false;
+            }
 
-//            _context.VideoHistories.Update(stream);
-//            return await _context.SaveChangesAsync() > 0;
-//        }
-//        public async Task<bool> StartLiveStreamAsync(VideoHistory stream)
-//        {
-//            var program = await _context.Programs.FindAsync(stream.ProgramID);
-//            if (program == null)
-//            {
-//                _logger.LogError("Program not found for ProgramID: {0}", stream.ProgramID);
-//                return false;
-//            }
-//            if (!string.IsNullOrEmpty(program.CloudflareStreamId))
-//            {
-//                _logger.LogInformation("Reusing CloudflareStreamId for ProgramID: {0}", program.ProgramID);
+            if (!string.IsNullOrEmpty(program.CloudflareStreamId))
+            {
+                var checkUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{program.CloudflareStreamId}";
+                var checkResponse = await _httpClient.GetAsync(checkUrl);
 
-//                stream.CloudflareStreamId = program.CloudflareStreamId;
-//                stream.URL = $"rtmps://live.cloudflare.com:443/live/{program.CloudflareStreamId}";
-//                stream.PlaybackUrl = "";
-//                stream.CreatedAt = DateTime.UtcNow;
-//                stream.Status = true;
+                if (checkResponse.IsSuccessStatusCode)
+                {
+                    var checkJson = await checkResponse.Content.ReadAsStringAsync();
+                    var existingStream = JsonSerializer.Deserialize<CloudflareLiveInputResponse>(checkJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-//                _context.VideoHistories.Add(stream);
-//                return await _context.SaveChangesAsync() > 0;
-//            }
-//            var payload = new
-//            {
-//                meta = new { name = stream.Description },
-//                recording = new { mode = "automatic" },
-//                mode = "push",
-//                playback_policy = new[] { "public" }
-//            };
+                    var rtmps = existingStream?.Result?.Rtmps;
+                    if (rtmps != null)
+                    {
+                        _logger.LogInformation("Reusing existing CloudflareStreamId for ProgramID: {0}", program.ProgramID);
 
-//            var jsonPayload = JsonSerializer.Serialize(payload);
-//            var requestContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                        stream.CloudflareStreamId = program.CloudflareStreamId;
+                        stream.URL = $"{rtmps.Url}{rtmps.StreamKey}";
+                        stream.PlaybackUrl = string.Empty;
+                        stream.CreatedAt = DateTime.UtcNow;
+                        stream.Status = true;
 
-//            var url = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs";
+                        return await _repository.AddVideoHistoryAsync(stream);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Missing RTMPS config in reused stream for ProgramID: {0}", program.ProgramID);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("CloudflareStreamId {0} is invalid. Creating new stream...", program.CloudflareStreamId);
+                    program.CloudflareStreamId = null;
+                }
+            }
 
-//            try
-//            {
-//                _logger.LogInformation("Sending request to Cloudflare Live Input API...");
-//                var response = await _httpClient.PostAsync(url, requestContent);
+            var payload = new
+            {
+                meta = new { name = stream.Description },
+                recording = new { mode = "automatic" },
+                mode = "push",
+                playback_policy = new[] { "public" }
+            };
 
-//                var content = await response.Content.ReadAsStringAsync();
-//                if (!response.IsSuccessStatusCode)
-//                {
-//                    _logger.LogError("Failed to create live input. Status: {0}, Error: {1}", response.StatusCode, content);
-//                    return false;
-//                }
+            var jsonPayload = JsonSerializer.Serialize(payload);
+            var requestContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            var url = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs";
 
-//                var cloudflareResponse = JsonSerializer.Deserialize<CloudflareLiveInputResponse>(content,
-//                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            try
+            {
+                var response = await _httpClient.PostAsync(url, requestContent);
+                var content = await response.Content.ReadAsStringAsync();
 
-//                if (cloudflareResponse?.Result == null)
-//                {
-//                    _logger.LogError("Invalid Cloudflare response: {0}", content);
-//                    return false;
-//                }
-//                stream.CloudflareStreamId = cloudflareResponse.Result.Uid;
-//                program.CloudflareStreamId = cloudflareResponse.Result.Uid;
-//                _context.Programs.Update(program);
-//                if (cloudflareResponse.Result.Rtmps != null)
-//                {
-//                    stream.URL = $"{cloudflareResponse.Result.Rtmps.Url}{cloudflareResponse.Result.Rtmps.StreamKey}";
-//                }
-//                else
-//                {
-//                    stream.URL = null;
-//                    _logger.LogWarning("RTMPS info missing from Cloudflare response.");
-//                }
-//                stream.PlaybackUrl = cloudflareResponse.Result.WebRTCPlayback?.Url ?? string.Empty;
-//                stream.CreatedAt = DateTime.UtcNow;
-//                stream.Status = true;
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Failed to create live input. Status: {0}, Error: {1}", response.StatusCode, content);
+                    return false;
+                }
 
-//                _context.VideoHistories.Add(stream);
-//                return await _context.SaveChangesAsync() > 0;
-//            }
-//            catch (Exception ex)
-//            {
-//                _logger.LogError(ex, "An error occurred while creating Cloudflare stream input.");
-//                return false;
-//            }
-//        }
-//        public async Task<bool> EndStreamAndReturnLinksAsync(VideoHistory stream)
-//        {
-//            stream.Status = false;
-//            stream.Type = "Recorded";
-//            stream.UpdatedAt = DateTime.UtcNow;
-//            var videosUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{stream.CloudflareStreamId}/videos";
-//            var response = await _httpClient.GetAsync(videosUrl);
+                var cloudflareResponse = JsonSerializer.Deserialize<CloudflareLiveInputResponse>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (cloudflareResponse?.Result == null)
+                {
+                    _logger.LogError("Invalid Cloudflare response: {0}", content);
+                    return false;
+                }
 
-//            if (!response.IsSuccessStatusCode)
-//            {
-//                _logger.LogError("Failed to fetch Cloudflare video list. Status: {Status}", response.StatusCode);
-//                return false;
-//            }
-//            var json = await response.Content.ReadAsStringAsync();
-//            var videoDetails = JsonSerializer.Deserialize<CloudflareVideoListResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                stream.CloudflareStreamId = cloudflareResponse.Result.Uid;
+                program.CloudflareStreamId = cloudflareResponse.Result.Uid;
+                await _repository.UpdateProgramAsync(program);
 
-//            if (videoDetails?.Result?.FirstOrDefault() == null)
-//            {
-//                _logger.LogError("No recorded video found for stream {StreamId}", stream.CloudflareStreamId);
-//                return false;
-//            }
-//            var recordedVideo = videoDetails.Result.First();
-//            stream.PlaybackUrl = recordedVideo.Playback?.Hls;
-//            var downloadUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/{recordedVideo.Uid}/downloads";
-//            var downloadResponse = await _httpClient.PostAsync(downloadUrl, null);
+                stream.URL = cloudflareResponse.Result.Rtmps != null
+                    ? $"{cloudflareResponse.Result.Rtmps.Url}{cloudflareResponse.Result.Rtmps.StreamKey}"
+                    : null;
 
-//            if (!downloadResponse.IsSuccessStatusCode)
-//            {
-//                _logger.LogWarning("Failed to initiate MP4 download.");
-//            }
-//            else
-//            {
-//                bool isMp4Ready = false;
-//                string mp4Url = null;
+                stream.PlaybackUrl = cloudflareResponse.Result.WebRTCPlayback?.Url ?? string.Empty;
+                stream.CreatedAt = DateTime.UtcNow;
+                stream.Status = true;
 
-//                for (int i = 0; i < 6; i++)
-//                {
-//                    await Task.Delay(TimeSpan.FromSeconds(10));
+                return await _repository.AddVideoHistoryAsync(stream);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating Cloudflare stream input.");
+                return false;
+            }
+        }
 
-//                    var statusResponse = await _httpClient.GetAsync(downloadUrl);
-//                    if (!statusResponse.IsSuccessStatusCode)
-//                        continue;
+        public async Task<bool> EndStreamAndReturnLinksAsync(VideoHistory stream)
+        {
+            stream.Status = false;
+            stream.Type = "Recorded";
+            stream.UpdatedAt = DateTime.UtcNow;
 
-//                    var statusJson = await statusResponse.Content.ReadAsStringAsync();
-//                    var downloadStatus = JsonSerializer.Deserialize<CloudflareDownloadStatusResponse>(statusJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var videosUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{stream.CloudflareStreamId}/videos";
+            var response = await _httpClient.GetAsync(videosUrl);
 
-//                    if (downloadStatus?.Result?.Default?.Status == "ready")
-//                    {
-//                        mp4Url = downloadStatus.Result.Default.Url;
-//                        isMp4Ready = true;
-//                        break;
-//                    }
-//                }
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to fetch Cloudflare video list. Status: {Status}", response.StatusCode);
+                return false;
+            }
+            var json = await response.Content.ReadAsStringAsync();
+            var videoDetails = JsonSerializer.Deserialize<CloudflareVideoListResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-//                if (!string.IsNullOrEmpty(mp4Url))
-//                {
-//                    stream.MP4Url = mp4Url;
-//                }
-//            }
-//            _context.VideoHistories.Update(stream);
-//            return await _context.SaveChangesAsync() > 0;
-//        }
+            var recordedVideo = videoDetails?.Result?.FirstOrDefault();
+            if (recordedVideo == null)
+            {
+                _logger.LogWarning("EARLY END DETECTED: No recorded video found for stream {StreamId}.", stream.CloudflareStreamId);
+                return false;
+            }
+            stream.PlaybackUrl = recordedVideo.Playback?.Hls;
 
-//        public async Task<bool> EndLiveStreamAsync(VideoHistory stream)
-//        {
-//            var deleteUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{stream.CloudflareStreamId}";
-//            var deleteResponse = await _httpClient.DeleteAsync(deleteUrl);
+            var downloadUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/{recordedVideo.Uid}/downloads";
+            var downloadResponse = await _httpClient.PostAsync(downloadUrl, null);
 
-//            if (deleteResponse.IsSuccessStatusCode)
-//            {
-//                _logger.LogInformation("Cloudflare live input deleted.");
-//            }
-//            else
-//            {
-//                _logger.LogWarning("Failed to delete Cloudflare live input.");
-//            }
+            if (downloadResponse.IsSuccessStatusCode)
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10));
+                    var statusResponse = await _httpClient.GetAsync(downloadUrl);
+                    if (!statusResponse.IsSuccessStatusCode) continue;
 
-//            return true;
-//        }
-//        public async Task<VideoHistory> GetLiveStreamByIdAsync(int id)
-//        {
-//            return await _context.VideoHistories
-//                .Include(vh => vh.VideoViews)
-//                .Include(vh => vh.VideoLikes)
-//                .FirstOrDefaultAsync(vh => vh.VideoHistoryID == id);
-//        }
+                    var statusJson = await statusResponse.Content.ReadAsStringAsync();
+                    var downloadStatus = JsonSerializer.Deserialize<CloudflareDownloadStatusResponse>(statusJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-//        public async Task<IEnumerable<VideoHistory>> GetActiveLiveStreamsAsync()
-//        {
-//            return await _context.VideoHistories
-//                .AsNoTracking()
-//                .Where(vh => vh.Status)
-//                .ToListAsync();
-//        }
+                    if (downloadStatus?.Result?.Default?.Status == "ready")
+                    {
+                        stream.MP4Url = downloadStatus.Result.Default.Url;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Failed to initiate MP4 download.");
+            }
 
-//        public async Task<bool> AddLikeAsync(VideoLike like)
-//        {
-//            _context.VideoLikes.Add(like);
-//            return await _context.SaveChangesAsync() > 0;
-//        }
+            return await _repository.UpdateVideoHistoryAsync(stream);
+        }
 
-//        public async Task<bool> AddViewAsync(VideoView view)
-//        {
-//            _context.VideoViews.Add(view);
-//            return await _context.SaveChangesAsync() > 0;
-//        }
+        public async Task<bool> EndLiveStreamAsync(VideoHistory stream)
+        {
+            var deleteUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{stream.CloudflareStreamId}";
+            var deleteResponse = await _httpClient.DeleteAsync(deleteUrl);
 
-//        public async Task<bool> AddShareAsync(Share share)
-//        {
-//            _context.Shares.Add(share);
-//            return await _context.SaveChangesAsync() > 0;
-//        }
+            if (!deleteResponse.IsSuccessStatusCode)
+                _logger.LogWarning("Failed to delete Cloudflare live input.");
+            else
+                _logger.LogInformation("Cloudflare live input deleted.");
 
-//        public async Task<bool> CreateScheduleAsync(Schedule schedule)
-//        {
-//            _context.Schedules.Add(schedule);
-//            return await _context.SaveChangesAsync() > 0;
-//        }
+            return true;
+        }
+        public async Task<bool> IsStreamLiveAsync(string cloudflareStreamId)
+        {
+            var url = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{cloudflareStreamId}";
+            var response = await _httpClient.GetAsync(url);
 
-//        public async Task<IEnumerable<Schedule>> GetSchedulesBySchoolChannelIdAsync(int schoolChannelId)
-//        {
-//            return await _context.Schedules
-//                .AsNoTracking()
-//                .Where(s => s.Program.SchoolChannel.SchoolChannelID == schoolChannelId)
-//                .ToListAsync();
-//        }
+            if (!response.IsSuccessStatusCode) return false;
 
-//        public async Task<bool> CreateProgramAsync(Program program)
-//        {
-//            _context.Programs.Add(program);
-//            return await _context.SaveChangesAsync() > 0;
-//        }
+            var json = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<CloudflareLiveInputResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-//        // DTO classes
-//        private class CloudflareDownloadStatusResponse
-//        {
-//            public CloudflareDownloadResult Result { get; set; }
-//            public bool Success { get; set; }
-//        }
+            return result?.Result?.Status?.ToLower() == "live";
+        }
 
-//        private class CloudflareDownloadResult
-//        {
-//            public CloudflareDownloadDefault Default { get; set; }
-//        }
+        public async Task<VideoHistory> GetLiveStreamByIdAsync(int id) => await _repository.GetLiveStreamByIdAsync(id);
+        public async Task<IEnumerable<VideoHistory>> GetActiveLiveStreamsAsync() => await _repository.GetActiveLiveStreamsAsync();
+        public async Task<bool> AddLikeAsync(VideoLike like) => await _repository.AddLikeAsync(like);
+        public async Task<bool> AddViewAsync(VideoView view) => await _repository.AddViewAsync(view);
+        public async Task<bool> AddShareAsync(Share share) => await _repository.AddShareAsync(share);
+        public async Task<bool> CreateScheduleAsync(Schedule schedule) => await _repository.CreateScheduleAsync(schedule);
+        public async Task<IEnumerable<Schedule>> GetSchedulesBySchoolChannelIdAsync(int schoolChannelId) => await _repository.GetSchedulesBySchoolChannelIdAsync(schoolChannelId);
+        public async Task<bool> CreateProgramAsync(Program program) => await _repository.CreateProgramAsync(program);
 
-//        private class CloudflareDownloadDefault
-//        {
-//            public string Status { get; set; }
-//            public string Url { get; set; }
-//            public float PercentComplete { get; set; }
-//        }
+        private class CloudflareDownloadStatusResponse { public CloudflareDownloadResult Result { get; set; } public bool Success { get; set; } }
+        private class CloudflareDownloadResult { public CloudflareDownloadDefault Default { get; set; } }
+        private class CloudflareDownloadDefault { public string Status { get; set; } public string Url { get; set; } public float PercentComplete { get; set; } }
+        private class CloudflareLiveInputResponse { public CloudflareLiveInputResult Result { get; set; } public bool Success { get; set; } }
+        private class CloudflareLiveInputResult
+        {
+            public string Uid { get; set; }
+            public string Status { get; set; }
+            public CloudflarePlayback Playback { get; set; }
+            public CloudflareRtmps Rtmps { get; set; }
+            public CloudflareWebRTCPlayback WebRTCPlayback { get; set; }
+        }
 
-//        private class CloudflareLiveInputResponse
-//        {
-//            public CloudflareLiveInputResult Result { get; set; }
-//            public bool Success { get; set; }
-//        }
-
-//        private class CloudflareLiveInputResult
-//        {
-//            public string Uid { get; set; }
-//            public CloudflarePlayback Playback { get; set; }
-//            public CloudflareRtmps Rtmps { get; set; }
-//            public CloudflareWebRTCPlayback WebRTCPlayback { get; set; }
-//        }
-
-//        private class CloudflareWebRTCPlayback
-//        {
-//            public string Url { get; set; }
-//        }
-
-//        private class CloudflarePlayback
-//        {
-//            public string Hls { get; set; }
-//            public string Dash { get; set; }
-//        }
-
-//        private class CloudflareRtmps
-//        {
-//            public string Url { get; set; }
-//            public string StreamKey { get; set; }
-//        }
-
-//        private class CloudflareVideoListResponse
-//        {
-//            public List<CloudflareVideoResult> Result { get; set; }
-//        }
-
-//        private class CloudflareVideoResult
-//        {
-//            public string Uid { get; set; }
-//            public CloudflarePlayback Playback { get; set; }
-//            public string DownloadableUrl { get; set; }
-//        }
-//    }
-//}
+        private class CloudflareWebRTCPlayback { public string Url { get; set; } }
+        private class CloudflarePlayback { public string Hls { get; set; } public string Dash { get; set; } }
+        private class CloudflareRtmps { public string Url { get; set; } public string StreamKey { get; set; } }
+        private class CloudflareVideoListResponse { public List<CloudflareVideoResult> Result { get; set; } }
+        private class CloudflareVideoResult { public string Status { get; set; } public string Uid { get; set; } public CloudflarePlayback Playback { get; set; } public string DownloadableUrl { get; set; } }
+    }
+}

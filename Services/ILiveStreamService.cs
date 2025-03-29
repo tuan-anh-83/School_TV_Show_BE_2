@@ -21,5 +21,6 @@ namespace Services
         Task<bool> CreateProgramAsync(Program program);
         Task<bool> SaveRecordedVideoFromWebhookAsync(string cloudflareInputUid, string downloadableUrl, string hlsUrl);
         Task<bool> EndStreamAndReturnLinksAsync(VideoHistory stream);
+        Task<bool> IsStreamLiveAsync(string cloudflareStreamId);
     }
 }

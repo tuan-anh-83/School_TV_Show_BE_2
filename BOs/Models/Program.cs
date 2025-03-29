@@ -11,7 +11,7 @@ namespace BOs.Models
         public int ProgramID { get; set; }
 
         public int SchoolChannelID { get; set; }
-
+        public string CloudflareStreamId { get; set; }
         public string ProgramName { get; set; }
         public string Title { get; set; }
         public string Link { get; set; }
@@ -26,9 +26,5 @@ namespace BOs.Models
         public ICollection<VideoHistory> VideoHistories { get; set; }
         public ICollection<ProgramFollow> ProgramFollows { get; set; }
 
-        public Program()
-        {
-            SchoolChannel = new SchoolChannel();
-        }
     }
 }
