@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace BOs.Models
@@ -10,8 +11,9 @@ namespace BOs.Models
     {
         public int CategoryNewsID { get; set; }
         public string CategoryName { get; set; }
-        public string? Description { get; set; } // Kiểu string, cho phép null
+        public string Description { get; set; }
 
-        public ICollection<News> News { get; set; } = new List<News>();
+        [JsonIgnore]
+        public ICollection<News>? News { get; set; }
     }
 }

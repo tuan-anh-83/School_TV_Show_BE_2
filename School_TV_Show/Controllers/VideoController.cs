@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using School_TV_Show.DTO;
 using Services;
 using Services.CloudFlareService;
@@ -15,14 +16,18 @@ namespace School_TV_Show.Controllers
     {
         private readonly IVideoService _videoService;
         private readonly ILogger<VideoHistoryController> _logger;
+        private readonly CloudflareSettings _cloudflareSettings;
 
         public VideoHistoryController(
             IVideoService videoService,
-            ILogger<VideoHistoryController> logger)
+            ILogger<VideoHistoryController> logger,
+            IOptions<CloudflareSettings> cloudflareOptions)
         {
             _videoService = videoService;
             _logger = logger;
+            _cloudflareSettings = cloudflareOptions.Value;
         }
+
 
         [HttpGet("all")]
         [Authorize(Roles = "Admin")]
@@ -37,7 +42,7 @@ namespace School_TV_Show.Controllers
         public async Task<IActionResult> GetAllActiveVideos()
         {
             var videos = await _videoService.GetAllVideosAsync();
-            var filteredVideos = videos.Where(video => video.Status == true);
+            var filteredVideos = videos.Where(video => video.Status);
             return Ok(filteredVideos);
         }
 
@@ -52,31 +57,47 @@ namespace School_TV_Show.Controllers
             return Ok(video);
         }
 
-        [HttpPost("add")]
+        [HttpPost("UploadCloudflare")]
         [Authorize(Roles = "SchoolOwner")]
-        public async Task<IActionResult> AddVideo([FromBody] CreateVideoHistoryRequest request)
+        public async Task<IActionResult> AddVideoHistoryWithCloudflare([FromForm] UploadVideoHistoryRequest request)
         {
-            if (request == null || string.IsNullOrEmpty(request.URL) || string.IsNullOrEmpty(request.Type))
-                return BadRequest(new { message = "Invalid video data" });
+            if (request.VideoFile == null || request.VideoFile.Length == 0)
+                return BadRequest(new { message = "No video file provided." });
 
             var videoHistory = new VideoHistory
             {
-                Description = request.Description,
                 ProgramID = request.ProgramID,
-                Status = true,
                 Type = request.Type,
-                URL = request.URL,
+                Description = request.Description,
+                Status = true,
+                StreamAt = request.StreamAt,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                StreamAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow
             };
 
-            var result = await _videoService.AddVideoAsync(videoHistory);
-            if (!result)
-                return StatusCode(500, "Error creating video");
+            var result = await _videoService.AddVideoWithCloudflareAsync(request.VideoFile, videoHistory);
 
-            return Ok(new { message = "Video added successfully" });
+            if (!result)
+                return StatusCode(500, new { message = "Failed to upload video to Cloudflare." });
+
+            return Ok(new
+            {
+                message = "Video uploaded and saved successfully.",
+                data = new
+                {
+                    videoId = videoHistory.VideoHistoryID,
+                    programId = videoHistory.ProgramID,
+                    type = videoHistory.Type,
+                    description = videoHistory.Description,
+                    streamAt = videoHistory.StreamAt,
+                    playbackUrl = videoHistory.PlaybackUrl,
+                    mp4Url = videoHistory.MP4Url,
+                    cloudflareStreamId = videoHistory.CloudflareStreamId,
+                    iframeUrl = $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{videoHistory.CloudflareStreamId}/iframe"
+                }
+            });
         }
+
 
         [HttpPut("{id}")]
         [Authorize(Roles = "SchoolOwner")]
@@ -142,6 +163,7 @@ namespace School_TV_Show.Controllers
                 video.CreatedAt
             });
         }
+
         [HttpGet("by-date")]
         public async Task<IActionResult> GetVideosByDate([FromQuery] DateTime date)
         {
@@ -162,7 +184,6 @@ namespace School_TV_Show.Controllers
 
             return Ok(result);
         }
-
     }
 
 }

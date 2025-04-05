@@ -89,6 +89,7 @@ builder.Services.AddScoped<ISchoolChannelFollowRepo, SchoolChannelFollowRepo>();
 builder.Services.AddScoped<IPaymentHistoryRepo, PaymentHistoryRepo>();
 builder.Services.AddScoped<IAdScheduleRepo, AdScheduleRepo>();
 builder.Services.AddScoped<ILiveStreamRepo, LiveStreamRepo>();
+builder.Services.AddScoped<ICategoryNewsRepo, CategoryNewsRepo>();
 
 // Services
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -112,12 +113,14 @@ builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddHttpClient<ILiveStreamService, LiveStreamService>();
 builder.Services.AddScoped<ISchoolChannelFollowService, SchoolChannelFollowService>();
 builder.Services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
+builder.Services.AddScoped<ICategoryNewsService, CategoryNewsService>();
 builder.Services.AddHostedService<PendingAccountReminderService>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 //builder.Services.AddSingleton<OrderTrackingService>();
 builder.Services.AddHostedService<LiveStreamScheduler>();
 builder.Services.AddScoped<IAdScheduleService, AdScheduleService>();
+builder.Services.AddHttpClient<ICloudflareUploadService, CloudflareUploadService>();
 
 
 builder.Services.AddDistributedMemoryCache();

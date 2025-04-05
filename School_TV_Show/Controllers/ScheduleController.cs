@@ -30,7 +30,8 @@ namespace School_TV_Show.Controllers
                 ProgramID = request.ProgramID,
                 StartTime = request.StartTime,
                 EndTime = request.EndTime,
-                Status = "Pending"
+                Status = "Pending",
+                IsReplay = request.IsReplay // 🔥 Added
             };
 
             var created = await _scheduleService.CreateScheduleAsync(schedule);

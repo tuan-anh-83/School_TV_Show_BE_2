@@ -12,6 +12,6 @@ namespace School_TV_Show.DTO
 
         [Required(ErrorMessage = "EndTime is required.")]
         public DateTime EndTime { get; set; }
-
+        public bool IsReplay { get; set; } = false;
     }
 }
