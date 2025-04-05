@@ -34,6 +34,18 @@ namespace Services
                 new AuthenticationHeaderValue("Bearer", _cloudflareSettings.ApiToken);
         }
 
+        public async Task<bool> CheckStreamerStartedAsync(string cloudflareStreamId)
+        {
+            var videosUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{cloudflareStreamId}/videos";
+            var response = await _httpClient.GetAsync(videosUrl);
+            if (!response.IsSuccessStatusCode)
+                return false;
+
+            var json = await response.Content.ReadAsStringAsync();
+            var videoDetails = System.Text.Json.JsonSerializer.Deserialize<CloudflareVideoListResponse>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            return videoDetails?.Result?.Any(video => video.Status?.State == "live-inprogress") ?? false;
+        }
         public async Task<bool> SaveRecordedVideoFromWebhookAsync(string cloudflareInputUid, string downloadableUrl, string hlsUrl)
         {
             var existingRecorded = await _repository.GetRecordedVideoByStreamIdAsync(cloudflareInputUid);
@@ -59,7 +71,13 @@ namespace Services
         }
         public async Task<bool> StartLiveStreamAsync(VideoHistory stream)
         {
-            var program = await _repository.GetProgramByIdAsync(stream.ProgramID);
+            if (stream.ProgramID == null)
+            {
+                _logger.LogError("ProgramID is null. Cannot start livestream.");
+                return false;
+            }
+
+            var program = await _repository.GetProgramByIdAsync(stream.ProgramID.Value);
             if (program == null)
             {
                 _logger.LogError("Program not found for ProgramID: {0}", stream.ProgramID);
@@ -74,7 +92,7 @@ namespace Services
                 if (checkResponse.IsSuccessStatusCode)
                 {
                     var checkJson = await checkResponse.Content.ReadAsStringAsync();
-                    var existingStream = JsonSerializer.Deserialize<CloudflareLiveInputResponse>(checkJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    var existingStream = System.Text.Json.JsonSerializer.Deserialize<CloudflareLiveInputResponse>(checkJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                     var rtmps = existingStream?.Result?.Rtmps;
                     if (rtmps != null)
@@ -109,7 +127,7 @@ namespace Services
                 playback_policy = new[] { "public" }
             };
 
-            var jsonPayload = JsonSerializer.Serialize(payload);
+            var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
             var requestContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
             var url = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs";
 
@@ -124,7 +142,7 @@ namespace Services
                     return false;
                 }
 
-                var cloudflareResponse = JsonSerializer.Deserialize<CloudflareLiveInputResponse>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var cloudflareResponse = System.Text.Json.JsonSerializer.Deserialize<CloudflareLiveInputResponse>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (cloudflareResponse?.Result == null)
                 {
                     _logger.LogError("Invalid Cloudflare response: {0}", content);
@@ -151,7 +169,6 @@ namespace Services
                 return false;
             }
         }
-
         public async Task<bool> EndStreamAndReturnLinksAsync(VideoHistory stream)
         {
             stream.Status = false;
@@ -166,27 +183,39 @@ namespace Services
                 _logger.LogError("Failed to fetch Cloudflare video list. Status: {Status}", response.StatusCode);
                 return false;
             }
+
             var json = await response.Content.ReadAsStringAsync();
             var videoDetails = JsonSerializer.Deserialize<CloudflareVideoListResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
             var recordedVideo = videoDetails?.Result?.FirstOrDefault();
             if (recordedVideo == null)
             {
                 _logger.LogWarning("EARLY END DETECTED: No recorded video found for stream {StreamId}.", stream.CloudflareStreamId);
                 return false;
             }
-            stream.PlaybackUrl = recordedVideo.Playback?.Hls;
+
+            stream.PlaybackUrl = $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{recordedVideo.Uid}/iframe";
+            stream.Duration = recordedVideo.Duration;
+            _logger.LogInformation("Stream duration saved: {Duration} seconds", stream.Duration);
 
             var downloadUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/{recordedVideo.Uid}/downloads";
             var downloadResponse = await _httpClient.PostAsync(downloadUrl, null);
 
             if (downloadResponse.IsSuccessStatusCode)
             {
-                for (int i = 0; i < 6; i++)
+                int retryCount = 0;
+                const int maxRetries = 5;
+                const int delaySeconds = 15;
+
+                while (retryCount < maxRetries)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(10));
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+
                     var statusResponse = await _httpClient.GetAsync(downloadUrl);
-                    if (!statusResponse.IsSuccessStatusCode) continue;
+                    if (!statusResponse.IsSuccessStatusCode)
+                    {
+                        retryCount++;
+                        continue;
+                    }
 
                     var statusJson = await statusResponse.Content.ReadAsStringAsync();
                     var downloadStatus = JsonSerializer.Deserialize<CloudflareDownloadStatusResponse>(statusJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -194,16 +223,26 @@ namespace Services
                     if (downloadStatus?.Result?.Default?.Status == "ready")
                     {
                         stream.MP4Url = downloadStatus.Result.Default.Url;
+                        _logger.LogInformation("MP4 download ready: {Url}", stream.MP4Url);
                         break;
                     }
+                    retryCount++;
                 }
             }
             else
             {
                 _logger.LogWarning("Failed to initiate MP4 download.");
             }
-
-            return await _repository.UpdateVideoHistoryAsync(stream);
+            var updateSuccess = await _repository.UpdateVideoHistoryAsync(stream);
+            if (!string.IsNullOrEmpty(stream.CloudflareStreamId))
+            {
+                var deleted = await EndLiveStreamAsync(stream);
+                if (deleted)
+                    _logger.LogInformation("Cloudflare input deleted successfully for stream {StreamID}", stream.VideoHistoryID);
+                else
+                    _logger.LogWarning("Failed to delete Cloudflare input for stream {StreamID}", stream.VideoHistoryID);
+            }
+            return updateSuccess;
         }
 
         public async Task<bool> EndLiveStreamAsync(VideoHistory stream)
@@ -226,9 +265,9 @@ namespace Services
             if (!response.IsSuccessStatusCode) return false;
 
             var json = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<CloudflareLiveInputResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = System.Text.Json.JsonSerializer.Deserialize<CloudflareLiveInputResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            return result?.Result?.Status?.ToLower() == "live";
+            return result?.Result?.Status?.State?.ToLower() == "live";
         }
 
         public async Task<VideoHistory> GetLiveStreamByIdAsync(int id) => await _repository.GetLiveStreamByIdAsync(id);
@@ -240,23 +279,57 @@ namespace Services
         public async Task<IEnumerable<Schedule>> GetSchedulesBySchoolChannelIdAsync(int schoolChannelId) => await _repository.GetSchedulesBySchoolChannelIdAsync(schoolChannelId);
         public async Task<bool> CreateProgramAsync(Program program) => await _repository.CreateProgramAsync(program);
 
+        #region Corrected Cloudflare Models
+        private class CloudflareVideoListResponse
+        {
+            public List<CloudflareVideoResult> Result { get; set; }
+            public bool Success { get; set; }
+            public List<object> Errors { get; set; }
+            public List<object> Messages { get; set; }
+        }
+
+        private class CloudflareVideoResult
+        {
+            public string Uid { get; set; }
+            public CloudflareVideoStatus Status { get; set; }
+            public double Duration { get; set; }
+        }
+
+        private class CloudflareVideoStatus
+        {
+            public string State { get; set; }
+            public string ErrorReasonCode { get; set; }
+            public string ErrorReasonText { get; set; }
+        }
+
+        private class CloudflarePlayback
+        {
+            public string Hls { get; set; }
+            public string Dash { get; set; }
+        }
+
         private class CloudflareDownloadStatusResponse { public CloudflareDownloadResult Result { get; set; } public bool Success { get; set; } }
         private class CloudflareDownloadResult { public CloudflareDownloadDefault Default { get; set; } }
         private class CloudflareDownloadDefault { public string Status { get; set; } public string Url { get; set; } public float PercentComplete { get; set; } }
+
         private class CloudflareLiveInputResponse { public CloudflareLiveInputResult Result { get; set; } public bool Success { get; set; } }
         private class CloudflareLiveInputResult
         {
             public string Uid { get; set; }
-            public string Status { get; set; }
+            public CloudflareStatus Status { get; set; }
             public CloudflarePlayback Playback { get; set; }
             public CloudflareRtmps Rtmps { get; set; }
             public CloudflareWebRTCPlayback WebRTCPlayback { get; set; }
         }
+        private class CloudflareStatus
+        {
+            public string State { get; set; }
+            public string ErrorReasonCode { get; set; }
+            public string ErrorReasonText { get; set; }
+        }
 
         private class CloudflareWebRTCPlayback { public string Url { get; set; } }
-        private class CloudflarePlayback { public string Hls { get; set; } public string Dash { get; set; } }
         private class CloudflareRtmps { public string Url { get; set; } public string StreamKey { get; set; } }
-        private class CloudflareVideoListResponse { public List<CloudflareVideoResult> Result { get; set; } }
-        private class CloudflareVideoResult { public string Status { get; set; } public string Uid { get; set; } public CloudflarePlayback Playback { get; set; } public string DownloadableUrl { get; set; } }
+        #endregion
     }
 }

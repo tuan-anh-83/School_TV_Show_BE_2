@@ -33,37 +33,33 @@ namespace DAOs
         public async Task<List<VideoView>> GetAllVideoViewsAsync()
         {
             return await _context.VideoViews
-                .Include(vv => vv.VideoHistory)
+                .Include(v => v.VideoHistory)
                 .ToListAsync();
         }
 
         public async Task<VideoView?> GetVideoViewByIdAsync(int videoViewId)
         {
-            if (videoViewId <= 0)
-                throw new ArgumentException("VideoView ID must be greater than zero.");
-
             return await _context.VideoViews
-                .Include(vv => vv.VideoHistory)
-                .FirstOrDefaultAsync(vv => vv.ViewID == videoViewId);
+                .Include(v => v.VideoHistory)
+                .FirstOrDefaultAsync(v => v.ViewID == videoViewId);
         }
 
         public async Task<bool> AddVideoViewAsync(VideoView videoView)
         {
-            if (videoView == null)
-                throw new ArgumentNullException(nameof(videoView));
+            bool vhExists = await _context.VideoHistories
+                .AnyAsync(v => v.VideoHistoryID == videoView.VideoHistoryID);
+            if (!vhExists) return false;
 
-            videoView.Quantity = 1;
+            bool accountExists = await _context.Accounts
+                .AnyAsync(a => a.AccountID == videoView.AccountID);
+            if (!accountExists) return false;
 
-            await _context.VideoViews.AddAsync(videoView);
-            await _context.SaveChangesAsync();
-            return true;
+            _context.VideoViews.Add(videoView);
+            return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<bool> UpdateVideoViewAsync(VideoView videoView)
         {
-            if (videoView == null || videoView.ViewID <= 0)
-                throw new ArgumentException("Invalid VideoView data.");
-
             var existingVideoView = await GetVideoViewByIdAsync(videoView.ViewID);
             if (existingVideoView == null)
                 return false;
@@ -75,14 +71,11 @@ namespace DAOs
 
         public async Task<bool> DeleteVideoViewAsync(int videoViewId)
         {
-            if (videoViewId <= 0)
-                throw new ArgumentException("VideoView ID must be greater than zero.");
-
             var videoView = await GetVideoViewByIdAsync(videoViewId);
             if (videoView == null)
                 return false;
 
-            videoView.Quantity = 0; // Instead of deleting, set Quantity to 0
+            videoView.Quantity = 0;
             _context.VideoViews.Update(videoView);
             await _context.SaveChangesAsync();
             return true;
@@ -90,22 +83,22 @@ namespace DAOs
 
         public async Task<int> GetTotalViewsForVideoAsync(int videoHistoryId)
         {
-            if (videoHistoryId <= 0)
-                throw new ArgumentException("VideoHistory ID must be greater than zero.");
-
             return await _context.VideoViews
-                .Where(v => v.VideoHistoryID == videoHistoryId && v.Quantity > 0)
-                .SumAsync(v => v.Quantity);
+                 .Where(v => v.VideoHistoryID == videoHistoryId && v.Quantity > 0)
+                 .SumAsync(v => v.Quantity);
         }
 
         public async Task<int> CountTotalViewsAsync()
         {
-            return await _context.VideoViews.SumAsync(v => v.Quantity);
+            return await _context.VideoViews
+                .Where(v => v.Quantity > 0)
+                .SumAsync(v => v.Quantity);
         }
 
         public async Task<Dictionary<int, int>> GetViewsCountPerVideoAsync()
         {
             return await _context.VideoViews
+                .Where(v => v.Quantity > 0)
                 .GroupBy(v => v.VideoHistoryID)
                 .Select(g => new { VideoId = g.Key, TotalViews = g.Sum(v => v.Quantity) })
                 .ToDictionaryAsync(g => g.VideoId, g => g.TotalViews);

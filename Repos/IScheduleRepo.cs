@@ -13,9 +13,12 @@ namespace Repos
         Task<Schedule> GetScheduleByIdAsync(int scheduleId);
         Task<IEnumerable<Schedule>> GetAllSchedulesAsync();
         Task<IEnumerable<Schedule>> GetActiveSchedulesAsync();
-        Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime);
-
         Task<bool> UpdateScheduleAsync(Schedule schedule);
         Task<bool> DeleteScheduleAsync(int scheduleId);
+        Task<IEnumerable<Schedule>> GetLiveNowSchedulesAsync();
+        Task<IEnumerable<Schedule>> GetUpcomingSchedulesAsync();
+        Task<Dictionary<string, List<Schedule>>> GetSchedulesGroupedTimelineAsync();
+        Task<IEnumerable<Schedule>> GetSchedulesByChannelAndDateAsync(int channelId, DateTime date);
+        Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date);
     }
 }

@@ -16,9 +16,9 @@ namespace Repos
         {
             _dao = LiveStreamDAO.Instance;
         }
-        public async Task<bool> UpdateScheduleAsync(Schedule schedule)
+        public void UpdateSchedule(Schedule schedule)
         {
-            return await _dao.UpdateScheduleAsync(schedule);
+            _dao.UpdateSchedule(schedule);
         }
         public async Task<AdSchedule?> GetNextAvailableAdAsync()
         {
@@ -38,6 +38,10 @@ namespace Repos
         public async Task<bool> UpdateVideoHistoryAsync(VideoHistory stream)
         {
             return await _dao.UpdateVideoHistoryAsync(stream);
+        }
+        public async Task<List<Schedule>> GetWaitingToStartStreamsAsync()
+        {
+            return await _dao.GetWaitingToStartStreamsAsync();
         }
 
         public async Task<Program> GetProgramByIdAsync(int id)
@@ -133,6 +137,33 @@ namespace Repos
         public async Task<VideoHistory> GetRecordedVideoByStreamIdAsync(string streamId)
         {
             return await _dao.GetRecordedVideoByStreamIdAsync(streamId);
+        }
+
+        public async Task<List<Schedule>> GetLiveSchedulesAsync()
+        {
+            return await _dao.GetLiveSchedulesAsync();
+        }
+        public async Task<List<Schedule>> GetOverdueSchedulesAsync(DateTime currentTime)
+        {
+            return await _dao.GetOverdueSchedulesAsync(currentTime);
+        }
+
+        public async Task<List<Schedule>> GetLateStartSchedulesPastEndTimeAsync(DateTime now)
+        {
+            return await _dao.GetLateStartCandidatesAsync(now);
+        }
+
+        public async Task AddSchedule(Schedule schedule)
+        {
+            await _dao.AddScheduleAsync(schedule);
+        }
+        public async Task UpdateAsync(Schedule schedule) 
+        {
+            await _dao.UpdateAsync(schedule);
+        }
+        public async Task<VideoHistory?> GetVideoHistoryByProgramIdAsync(int programId)
+        {
+            return await _dao.GetVideoHistoryByProgramIdAsync(programId);
         }
     }
 }

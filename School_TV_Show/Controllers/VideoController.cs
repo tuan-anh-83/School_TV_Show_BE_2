@@ -9,16 +9,16 @@ using Services.CloudFlareService;
 namespace School_TV_Show.Controllers
 {
 
-    [Route("api/[controller]")]
     [ApiController]
-    public class VideoController : ControllerBase
+    [Route("api/[controller]")]
+    public class VideoHistoryController : ControllerBase
     {
         private readonly IVideoService _videoService;
-        private readonly ILogger<VideoController> _logger;
+        private readonly ILogger<VideoHistoryController> _logger;
 
-        public VideoController(
+        public VideoHistoryController(
             IVideoService videoService,
-            ILogger<VideoController> logger)
+            ILogger<VideoHistoryController> logger)
         {
             _videoService = videoService;
             _logger = logger;
@@ -110,30 +110,6 @@ namespace School_TV_Show.Controllers
             return Ok(new { message = "Video deleted successfully" });
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("dashboard/totalVideos")]
-        public async Task<IActionResult> GetTotalVideos()
-        {
-            var totalVideos = await _videoService.GetTotalVideosAsync();
-            return Ok(new { totalVideos });
-        }
-
-        [Authorize(Roles = "Admin")]
-        [HttpGet("dashboard/totalVideosByStatus")]
-        public async Task<IActionResult> GetTotalVideosByStatus([FromQuery] bool status)
-        {
-            var totalVideos = await _videoService.GetTotalVideosByStatusAsync(status);
-            return Ok(new { totalVideos, status = status ? "Active" : "Inactive" });
-        }
-
-        [Authorize(Roles = "Admin")]
-        [HttpGet("dashboard/totalViewsAndLikes")]
-        public async Task<IActionResult> GetTotalViewsAndLikes()
-        {
-            var (totalViews, totalLikes) = await _videoService.GetTotalViewsAndLikesAsync();
-            return Ok(new { totalViews, totalLikes });
-        }
-
         [HttpGet("{id}/playback")]
         public async Task<IActionResult> GetVideoPlaybackUrl(int id)
         {
@@ -166,6 +142,27 @@ namespace School_TV_Show.Controllers
                 video.CreatedAt
             });
         }
+        [HttpGet("by-date")]
+        public async Task<IActionResult> GetVideosByDate([FromQuery] DateTime date)
+        {
+            var videos = await _videoService.GetVideosByDateAsync(date);
+
+            var result = videos.Select(v => new
+            {
+                v.VideoHistoryID,
+                v.Description,
+                v.Type,
+                v.URL,
+                v.PlaybackUrl,
+                v.MP4Url,
+                CreatedAt = v.CreatedAt.ToString("HH:mm:ss"),
+                v.Program?.ProgramName,
+                v.ProgramID
+            });
+
+            return Ok(result);
+        }
+
     }
 
 }

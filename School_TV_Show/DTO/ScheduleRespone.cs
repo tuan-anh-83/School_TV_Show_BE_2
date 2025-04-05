@@ -6,7 +6,6 @@
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public string Status { get; set; }
-        public string Mode { get; set; }
         public bool LiveStreamStarted { get; set; }
         public bool LiveStreamEnded { get; set; }
         public int ProgramID { get; set; }

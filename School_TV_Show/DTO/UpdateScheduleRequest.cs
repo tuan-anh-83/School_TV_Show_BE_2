@@ -10,7 +10,5 @@ namespace School_TV_Show.DTO
         [Required(ErrorMessage = "EndTime is required.")]
         public DateTime EndTime { get; set; }
 
-        [StringLength(20, ErrorMessage = "Mode cannot exceed 20 characters.")]
-        public string? Mode { get; set; }
     }
 }

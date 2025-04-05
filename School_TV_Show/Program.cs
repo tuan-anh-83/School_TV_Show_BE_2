@@ -17,6 +17,7 @@ using Services.SwaggerConfig;
 using Services.Token;
 using System.Security.Claims;
 using System.Text;
+using Services.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -120,6 +121,7 @@ builder.Services.AddScoped<IAdScheduleService, AdScheduleService>();
 
 
 builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSignalR();
 
 // Cloudflare configuration
 builder.Services.Configure<CloudflareSettings>(builder.Configuration.GetSection("Cloudflare"));
@@ -215,4 +217,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseExceptionHandler();
 app.MapControllers();
+app.MapHub<LiveStreamHub>("/hubs/livestream");
 app.Run();

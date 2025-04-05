@@ -34,27 +34,26 @@ namespace DAOs
         {
             return await _context.VideoLikes
                 .Include(vl => vl.VideoHistory)
-                .Include(vl => vl.Account)
                 .ToListAsync();
         }
 
         public async Task<VideoLike?> GetVideoLikeByIdAsync(int videoLikeId)
         {
-            if (videoLikeId <= 0)
-                throw new ArgumentException("VideoLike ID must be greater than zero.");
-
             return await _context.VideoLikes
                 .Include(vl => vl.VideoHistory)
-                .Include(vl => vl.Account)
                 .FirstOrDefaultAsync(vl => vl.LikeID == videoLikeId);
         }
 
         public async Task<bool> AddVideoLikeAsync(VideoLike videoLike)
         {
-            if (videoLike == null)
-                throw new ArgumentNullException(nameof(videoLike));
-
             videoLike.Quantity = 1;
+            bool vhExists = await _context.VideoHistories
+                .AnyAsync(v => v.VideoHistoryID == videoLike.VideoHistoryID);
+            if (!vhExists) return false;
+
+            bool accountExists = await _context.Accounts
+                .AnyAsync(a => a.AccountID == videoLike.AccountID);
+            if (!accountExists) return false;
 
             await _context.VideoLikes.AddAsync(videoLike);
             await _context.SaveChangesAsync();
@@ -63,9 +62,6 @@ namespace DAOs
 
         public async Task<bool> UpdateVideoLikeAsync(VideoLike videoLike)
         {
-            if (videoLike == null || videoLike.LikeID <= 0)
-                throw new ArgumentException("Invalid VideoLike data.");
-
             var existingVideoLike = await GetVideoLikeByIdAsync(videoLike.LikeID);
             if (existingVideoLike == null)
                 return false;
@@ -77,9 +73,6 @@ namespace DAOs
 
         public async Task<bool> DeleteVideoLikeAsync(int videoLikeId)
         {
-            if (videoLikeId <= 0)
-                throw new ArgumentException("VideoLike ID must be greater than zero.");
-
             var videoLike = await GetVideoLikeByIdAsync(videoLikeId);
             if (videoLike == null)
                 return false;
@@ -92,32 +85,34 @@ namespace DAOs
 
         public async Task<int> GetTotalLikesForVideoAsync(int videoHistoryId)
         {
-            if (videoHistoryId <= 0)
-                throw new ArgumentException("VideoHistory ID must be greater than zero.");
-
             return await _context.VideoLikes
-                .Where(s => s.VideoHistoryID == videoHistoryId && s.Quantity > 0)
-                .SumAsync(s => s.Quantity);
+                 .Where(s => s.VideoHistoryID == videoHistoryId && s.Quantity > 0)
+                 .SumAsync(s => s.Quantity);
         }
 
         public async Task<int> CountTotalLikesAsync()
         {
-            return await _context.VideoLikes.CountAsync();
+            return await _context.VideoLikes
+              .Where(v => v.Quantity > 0)
+              .SumAsync(v => v.Quantity);
         }
 
         public async Task<int> CountLikesByVideoIdAsync(int videoHistoryId)
         {
-            if (videoHistoryId <= 0)
-                throw new ArgumentException("VideoHistory ID must be greater than zero.");
-
-            return await _context.VideoLikes.CountAsync(vl => vl.VideoHistoryID == videoHistoryId);
+            return await _context.VideoLikes
+                .Where(v => v.VideoHistoryID == videoHistoryId && v.Quantity > 0)
+                .SumAsync(v => v.Quantity);
         }
 
         public async Task<Dictionary<int, int>> GetLikesCountPerVideoAsync()
         {
             return await _context.VideoLikes
-                .GroupBy(vl => vl.VideoHistoryID)
-                .ToDictionaryAsync(g => g.Key, g => g.Count());
+                .Where(v => v.Quantity > 0)
+                .GroupBy(v => v.VideoHistoryID)
+                .ToDictionaryAsync(
+                    g => g.Key,
+                    g => g.Sum(v => v.Quantity)
+                );
         }
     }
 }

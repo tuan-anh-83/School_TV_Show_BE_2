@@ -51,7 +51,6 @@ namespace School_TV_Show.Controllers
                     StartTime = s.StartTime,
                     EndTime = s.EndTime,
                     Status = s.Status,
-                    Mode = s.Mode,
                     LiveStreamStarted = s.LiveStreamStarted,
                     LiveStreamEnded = s.LiveStreamEnded,
                     ProgramID = s.ProgramID
@@ -150,7 +149,6 @@ namespace School_TV_Show.Controllers
                     StartTime = s.StartTime,
                     EndTime = s.EndTime,
                     Status = s.Status,
-                    Mode = s.Mode,
                     LiveStreamStarted = s.LiveStreamStarted,
                     LiveStreamEnded = s.LiveStreamEnded,
                     ProgramID = s.ProgramID

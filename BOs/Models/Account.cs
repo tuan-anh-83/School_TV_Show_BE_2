@@ -21,7 +21,6 @@ namespace BOs.Models
         public string Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public ICollection<VideoLike> VideoLikes { get; set; }
         public string? ExternalProvider { get; set; }
         public string? ExternalProviderKey { get; set; }
         public ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = new List<PasswordResetToken>();

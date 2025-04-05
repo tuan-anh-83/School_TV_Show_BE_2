@@ -16,7 +16,6 @@ namespace BOs.Models
         public int VideoHistoryID { get; set; }
         [Required]
         public int Quantity { get; set; } = 1;
-        public Account Account { get; set; }
         public VideoHistory VideoHistory { get; set; }
     }
 }

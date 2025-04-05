@@ -1,7 +1,9 @@
 ﻿using BOs.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using School_TV_Show.DTO;
+using Services.Hubs;
 using Services;
 using System.Security.Claims;
 
@@ -14,15 +16,20 @@ namespace School_TV_Show.Controllers
         private readonly IVideoViewService _videoViewService;
         private readonly IVideoService _videoService;
         private readonly ILogger<VideoViewController> _logger;
+        private readonly IHubContext<LiveStreamHub> _hubContext;
 
-        public VideoViewController(IVideoViewService videoViewService, IVideoService videoService, ILogger<VideoViewController> logger)
+        public VideoViewController(
+            IVideoViewService videoViewService,
+            IVideoService videoService,
+            ILogger<VideoViewController> logger,
+            IHubContext<LiveStreamHub> hubContext)
         {
             _videoViewService = videoViewService;
             _videoService = videoService;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
-        // GET: api/videoview
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAllVideoViews()
@@ -38,7 +45,7 @@ namespace School_TV_Show.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-        // GET: api/videolike/positive
+
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpGet("active")]
         public async Task<IActionResult> GetAllActiveVideoViews()
@@ -56,7 +63,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // GET: api/videoview/{id}
         [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetVideoViewById(int id)
@@ -76,7 +82,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // GET: api/videoview/total/{videoHistoryId}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpGet("total/{videoHistoryId}")]
         public async Task<IActionResult> GetTotalViewsForVideo(int videoHistoryId)
@@ -93,45 +98,42 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // POST: api/videoview
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpPost]
         public async Task<IActionResult> AddVideoView([FromBody] CreateVideoViewRequest request)
         {
             if (!ModelState.IsValid)
             {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                                              .ToList();
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
                 return BadRequest(new { errors });
             }
 
-            // Get the AccountID from JWT
             var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (accountIdClaim == null)
-            {
-                return Unauthorized("User is not authenticated.");
-            }
+            if (accountIdClaim == null || !int.TryParse(accountIdClaim.Value, out int accountId))
+                return Unauthorized();
 
             var videoView = new VideoView
             {
                 VideoHistoryID = request.VideoHistoryID,
-                Quantity = 1 // Automatically set quantity to 1
+                AccountID = accountId,
+                Quantity = 1
             };
+
 
             var video = await _videoService.GetVideoByIdAsync(request.VideoHistoryID);
             if (video == null || !video.Status)
-            {
                 return BadRequest("The specified video does not exist or is not active.");
-            }
 
             try
             {
                 var result = await _videoViewService.AddVideoViewAsync(videoView);
                 if (!result)
-                {
                     return BadRequest("Invalid VideoHistoryID.");
-                }
+
+                var totalViews = await _videoViewService.GetTotalViewsForVideoAsync(video.VideoHistoryID);
+                await _hubContext.Clients.Group(video.CloudflareStreamId)
+                    .SendAsync("ViewerCountUpdated", video.CloudflareStreamId, totalViews);
+
                 return CreatedAtAction(nameof(GetVideoViewById), new { id = videoView.ViewID }, videoView);
             }
             catch (Exception ex)
@@ -141,24 +143,19 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // PUT: api/videoview/{id}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateVideoView(int id, [FromBody] UpdateVideoViewRequest request)
         {
             if (!ModelState.IsValid)
             {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                                              .ToList();
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
                 return BadRequest(new { errors });
             }
 
             var videoView = await _videoViewService.GetVideoViewByIdAsync(id);
             if (videoView == null)
-            {
                 return NotFound("Video view not found");
-            }
 
             videoView.Quantity = request.Quantity;
 
@@ -166,9 +163,8 @@ namespace School_TV_Show.Controllers
             {
                 var result = await _videoViewService.UpdateVideoViewAsync(videoView);
                 if (!result)
-                {
                     return BadRequest("Invalid VideoHistoryID.");
-                }
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -178,7 +174,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // DELETE: api/videoview/{id}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVideoView(int id)
@@ -214,7 +209,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // GET: api/dashboard/views-per-video
         [Authorize(Roles = "Admin")]
         [HttpGet("views-per-video")]
         public async Task<IActionResult> GetViewsPerVideo()

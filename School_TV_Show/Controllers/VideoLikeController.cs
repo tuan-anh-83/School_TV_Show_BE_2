@@ -1,7 +1,9 @@
 ﻿using BOs.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using School_TV_Show.DTO;
+using Services.Hubs;
 using Services;
 using System.Security.Claims;
 
@@ -14,15 +16,20 @@ namespace School_TV_Show.Controllers
         private readonly IVideoLikeService _videoLikeService;
         private readonly IVideoService _videoService;
         private readonly ILogger<VideoLikeController> _logger;
+        private readonly IHubContext<LiveStreamHub> _hubContext;
 
-        public VideoLikeController(IVideoLikeService videoLikeService, IVideoService videoService, ILogger<VideoLikeController> logger)
+        public VideoLikeController(
+            IVideoLikeService videoLikeService,
+            IVideoService videoService,
+            ILogger<VideoLikeController> logger,
+            IHubContext<LiveStreamHub> hubContext)
         {
             _videoLikeService = videoLikeService;
             _videoService = videoService;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
-        // GET: api/videolike
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAllVideoLikes()
@@ -38,7 +45,7 @@ namespace School_TV_Show.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-        // GET: api/videolike/positive
+
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpGet("active")]
         public async Task<IActionResult> GetAllActiveVideoLikes()
@@ -46,8 +53,7 @@ namespace School_TV_Show.Controllers
             try
             {
                 var videoLikes = await _videoLikeService.GetAllVideoLikesAsync();
-                var positiveVideoLikes = videoLikes.Where(v => v.Quantity > 0);
-                return Ok(positiveVideoLikes);
+                return Ok(videoLikes.Where(v => v.Quantity > 0));
             }
             catch (Exception ex)
             {
@@ -56,7 +62,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // GET: api/videolike/{id}
         [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetVideoLikeById(int id)
@@ -76,7 +81,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // GET: api/videolike/total/{videoHistoryId}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpGet("total/{videoHistoryId}")]
         public async Task<IActionResult> GetTotalLikesForVideo(int videoHistoryId)
@@ -92,30 +96,20 @@ namespace School_TV_Show.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-        // POST: api/videolike
+
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpPost]
         public async Task<IActionResult> AddVideoLike([FromBody] CreateVideoLikeRequest request)
         {
             if (!ModelState.IsValid)
             {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                                              .ToList();
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
                 return BadRequest(new { errors });
             }
 
             var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (accountIdClaim == null)
-            {
-                return Unauthorized("User is not authenticated.");
-            }
-
-            if (!int.TryParse(accountIdClaim.Value, out int accountId))
-            {
+            if (accountIdClaim == null || !int.TryParse(accountIdClaim.Value, out int accountId))
                 return Unauthorized("Invalid account identifier.");
-            }
-
 
             var videoLike = new VideoLike
             {
@@ -126,17 +120,18 @@ namespace School_TV_Show.Controllers
 
             var video = await _videoService.GetVideoByIdAsync(request.VideoHistoryID);
             if (video == null || !video.Status)
-            {
                 return BadRequest("The specified video does not exist or is not active.");
-            }
 
             try
             {
                 var result = await _videoLikeService.AddVideoLikeAsync(videoLike);
                 if (!result)
-                {
                     return BadRequest("Invalid VideoHistoryID or AccountID.");
-                }
+
+                var totalLikes = await _videoLikeService.GetTotalLikesForVideoAsync(video.VideoHistoryID);
+                await _hubContext.Clients.Group(video.CloudflareStreamId)
+                    .SendAsync("LikeUpdated", new { videoId = video.VideoHistoryID, totalLikes });
+
                 return CreatedAtAction(nameof(GetVideoLikeById), new { id = videoLike.LikeID }, videoLike);
             }
             catch (Exception ex)
@@ -146,24 +141,19 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // PUT: api/videolike/{id}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateVideoLike(int id, [FromBody] UpdateVideoLikeRequest request)
         {
             if (!ModelState.IsValid)
             {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                                              .ToList();
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
                 return BadRequest(new { errors });
             }
 
             var videoLike = await _videoLikeService.GetVideoLikeByIdAsync(id);
             if (videoLike == null)
-            {
                 return NotFound("Video like not found");
-            }
 
             videoLike.Quantity = request.Quantity;
 
@@ -171,9 +161,8 @@ namespace School_TV_Show.Controllers
             {
                 var result = await _videoLikeService.UpdateVideoLikeAsync(videoLike);
                 if (!result)
-                {
-                    return BadRequest("Invalid VideoHistoryID or AccountID.");
-                }
+                    return BadRequest("Invalid update operation");
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -183,7 +172,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // DELETE: api/videolike/{id}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVideoLike(int id)
@@ -203,7 +191,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        //  Tổng số lượt thích trên toàn bộ video
         [Authorize(Roles = "Admin")]
         [HttpGet("totalLikes")]
         public async Task<IActionResult> GetTotalLikes()
@@ -212,7 +199,6 @@ namespace School_TV_Show.Controllers
             return Ok(new { totalLikes });
         }
 
-        //  Tổng số lượt thích theo video
         [Authorize(Roles = "Admin")]
         [HttpGet("likesByVideo/{videoHistoryId}")]
         public async Task<IActionResult> GetLikesByVideo(int videoHistoryId)
@@ -221,7 +207,6 @@ namespace School_TV_Show.Controllers
             return Ok(new { videoHistoryId, likes });
         }
 
-        //  Tổng số lượt thích của từng video
         [Authorize(Roles = "Admin")]
         [HttpGet("likesPerVideo")]
         public async Task<IActionResult> GetLikesPerVideo()

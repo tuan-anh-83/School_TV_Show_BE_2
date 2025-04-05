@@ -19,6 +19,10 @@ namespace Services
             _videoRepo = videoRepo;
             _logger = logger;
         }
+        public async Task<List<VideoHistory>> GetAllVideoHistoriesAsync()
+        {
+            return await _videoRepo.GetAllVideoHistoriesAsync();
+        }
         public async Task<List<VideoHistory>> GetAllVideosAsync()
         {
             return await _videoRepo.GetAllVideosAsync();
@@ -82,6 +86,10 @@ namespace Services
         public async Task<int> GetVideosByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             return await _videoRepo.CountByDateRangeAsync(startDate, endDate);
+        }
+        public async Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date)
+        {
+            return await _videoRepo.GetVideosByDateAsync(date);
         }
     }
 }

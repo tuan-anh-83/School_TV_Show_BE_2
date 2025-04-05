@@ -17,5 +17,7 @@ namespace Repos
         Task<int> CountByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<int> CountTotalVideosAsync();
         Task<VideoHistory?> GetLatestLiveStreamByProgramIdAsync(int programId);
+        Task<List<VideoHistory>> GetAllVideoHistoriesAsync();
+        Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date);
     }
 }

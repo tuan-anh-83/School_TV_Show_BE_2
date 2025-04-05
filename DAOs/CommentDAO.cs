@@ -35,14 +35,13 @@ namespace DAOs
         {
             return await _context.Comments
                 .Include(c => c.VideoHistory)
-                .Include(c => c.Account)
                 .ToListAsync();
         }
+
         public async Task<List<Comment>> GetAllActiveCommentsAsync()
         {
             return await _context.Comments
                 .Include(c => c.VideoHistory)
-                .Include(c => c.Account)
                 .Where(c => c.Quantity > 0)
                 .ToListAsync();
         }
@@ -51,7 +50,6 @@ namespace DAOs
         {
             return await _context.Comments
                 .Include(c => c.VideoHistory)
-                .Include(c => c.Account)
                 .FirstOrDefaultAsync(c => c.CommentID == commentId);
         }
 
@@ -59,16 +57,12 @@ namespace DAOs
         {
             bool vhExists = await _context.VideoHistories
                 .AnyAsync(v => v.VideoHistoryID == comment.VideoHistoryID);
-            if (!vhExists)
-            {
-                return false;
-            }
+            if (!vhExists) return false;
+
             bool accountExists = await _context.Accounts
                 .AnyAsync(a => a.AccountID == comment.AccountID);
-            if (!accountExists)
-            {
-                return false;
-            }
+            if (!accountExists) return false;
+
             await _context.Comments.AddAsync(comment);
             await _context.SaveChangesAsync();
             return true;
@@ -90,6 +84,7 @@ namespace DAOs
             var comment = await GetCommentByIdAsync(commentId);
             if (comment == null)
                 return false;
+
             comment.Quantity = 0;
             _context.Comments.Update(comment);
             await _context.SaveChangesAsync();
@@ -99,10 +94,8 @@ namespace DAOs
         public async Task<List<Comment>> GetCommentsWithAccountByVideoHistoryIdAsync(int videoHistoryId)
         {
             return await _context.Comments
-                .Where(c => c.VideoHistoryID == videoHistoryId)
+                .Where(c => c.VideoHistoryID == videoHistoryId && c.Quantity > 0)
                 .Include(c => c.VideoHistory)
-                .Include(c => c.Account)
-                .Where(c => c.Quantity > 0)
                 .ToListAsync();
         }
 

@@ -186,20 +186,12 @@ namespace BOs.Data
             {
                 entity.ToTable("Schedule");
                 entity.HasKey(e => e.ScheduleID);
-
-                entity.Property(e => e.ScheduleID)
-                      .ValueGeneratedOnAdd();
-
-                entity.Property(e => e.StartTime)
-                      .IsRequired();
-
-                entity.Property(e => e.EndTime)
-                      .IsRequired();
-
+                entity.Property(e => e.ScheduleID).ValueGeneratedOnAdd();
+                entity.Property(e => e.StartTime).IsRequired();
+                entity.Property(e => e.EndTime).IsRequired();
                 entity.Property(e => e.Status)
                       .HasMaxLength(50)
-                      .HasDefaultValue("Active");
-
+                      .HasDefaultValue("Pending");
                 entity.Property(e => e.LiveStreamStarted)
                       .IsRequired()
                       .HasDefaultValue(false);
@@ -207,17 +199,12 @@ namespace BOs.Data
                 entity.Property(e => e.LiveStreamEnded)
                       .IsRequired()
                       .HasDefaultValue(false);
-                entity.Property(e => e.Mode).IsRequired().HasDefaultValue("Live");
 
                 entity.HasOne(s => s.Program)
                       .WithMany(p => p.Schedules)
                       .HasForeignKey(s => s.ProgramID)
-                      .OnDelete(DeleteBehavior.NoAction);
+                      .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(s => s.VideoHistory)
-                      .WithMany(v => v.Schedules) 
-                      .HasForeignKey(s => s.VideoHistoryID)
-                      .OnDelete(DeleteBehavior.NoAction);
             });
             #endregion
 
@@ -238,7 +225,9 @@ namespace BOs.Data
                 entity.Property(e => e.Title).HasMaxLength(255);
                 entity.Property(e => e.Link).HasMaxLength(255);
                 entity.Property(e => e.Status).HasMaxLength(50);
-
+                entity.Property(e => e.CloudflareStreamId)
+                      .HasMaxLength(100)
+                      .IsRequired(false);
                 entity.HasMany(p => p.Schedules)
                       .WithOne(s => s.Program)
                       .HasForeignKey(s => s.ProgramID)
@@ -252,7 +241,7 @@ namespace BOs.Data
                 entity.HasMany(e => e.VideoHistories)
                       .WithOne(vh => vh.Program)
                       .HasForeignKey(vh => vh.ProgramID)
-                      .OnDelete(DeleteBehavior.NoAction);
+                      .OnDelete(DeleteBehavior.SetNull);
             });
             #endregion
 
@@ -265,6 +254,7 @@ namespace BOs.Data
                 entity.Property(e => e.URL).IsRequired().HasMaxLength(500);
                 entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.MP4Url).HasMaxLength(1000);
                 entity.Property(e => e.Status)
                       .HasColumnType("bit")
                       .HasDefaultValue(true);
@@ -311,11 +301,6 @@ namespace BOs.Data
                 entity.Property(e => e.LikeID).ValueGeneratedOnAdd();
                 entity.Property(e => e.Quantity).IsRequired();
 
-                entity.HasOne(e => e.Account)
-                      .WithMany(a => a.VideoLikes)
-                      .HasForeignKey(e => e.AccountID)
-                      .OnDelete(DeleteBehavior.Cascade);
-
                 entity.HasOne(e => e.VideoHistory)
                       .WithMany(vh => vh.VideoLikes)
                       .HasForeignKey(e => e.VideoHistoryID)
@@ -331,12 +316,8 @@ namespace BOs.Data
                 entity.Property(e => e.ShareID).ValueGeneratedOnAdd();
                 entity.Property(e => e.Quantity).IsRequired();
 
-                entity.HasOne(e => e.Account)
-                      .WithMany()
-                      .HasForeignKey(e => e.AccountID);
-
                 entity.HasOne(e => e.VideoHistory)
-                      .WithMany()
+                      .WithMany(vh => vh.Shares)
                       .HasForeignKey(e => e.VideoHistoryID)
                       .OnDelete(DeleteBehavior.NoAction);
             });
@@ -352,13 +333,8 @@ namespace BOs.Data
                 entity.Property(e => e.Content).IsRequired().HasMaxLength(1000);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
 
-                entity.HasOne(e => e.Account)
-                      .WithMany()
-                      .HasForeignKey(e => e.AccountID)
-                      .OnDelete(DeleteBehavior.NoAction);
-
                 entity.HasOne(e => e.VideoHistory)
-                      .WithMany()
+                      .WithMany(vh => vh.Comments)
                       .HasForeignKey(e => e.VideoHistoryID)
                       .OnDelete(DeleteBehavior.NoAction);
             });
@@ -384,6 +360,7 @@ namespace BOs.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
             #endregion
+
             #region Order
             modelBuilder.Entity<Order>(entity =>
             {
@@ -451,8 +428,7 @@ namespace BOs.Data
                 entity.Property(e => e.Duration).IsRequired();
                 entity.Property(e => e.Status)
                       .IsRequired()
-                      .HasMaxLength(50)
-                      .HasDefaultValue("Active");
+                      .HasDefaultValue(true);
                 entity.Property(e => e.CreatedAt)
                       .HasColumnType("datetime")
                       .HasDefaultValueSql("GETDATE()");
@@ -479,10 +455,10 @@ namespace BOs.Data
                       .HasForeignKey(e => e.OrderID)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(od => od.Package)
-                        .WithMany(p => p.OrderDetails)
-                        .HasForeignKey(od => od.PackageID)
-                        .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Package)
+                      .WithMany()
+                      .HasForeignKey(e => e.PackageID)
+                      .OnDelete(DeleteBehavior.NoAction);
             });
             #endregion
 
@@ -543,6 +519,13 @@ namespace BOs.Data
                       .HasMaxLength(100);
                 entity.Property(e => e.Description)
                       .HasMaxLength(100);
+
+
+                entity.HasMany(cn => cn.News)
+                      .WithOne(n => n.CategoryNews)
+                      .HasForeignKey(n => n.CategoryNewsID)
+                      .OnDelete(DeleteBehavior.Cascade)
+                      .IsRequired(false);
             });
             #endregion
 
@@ -590,7 +573,6 @@ namespace BOs.Data
             });
             #endregion
 
-
             #region AdSchedule
 
             modelBuilder.Entity<AdSchedule>(entity =>
@@ -605,7 +587,6 @@ namespace BOs.Data
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("GETDATE()");
             });
-
 
             #endregion
         }

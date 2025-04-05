@@ -15,9 +15,7 @@ namespace BOs.Models
         public string Status { get; set; } = "Pending";
         public bool LiveStreamStarted { get; set; } = false;
         public bool LiveStreamEnded { get; set; } = false;
-        public int? VideoHistoryID { get; set; }
+
         public virtual Program Program { get; set; }
-        public virtual VideoHistory VideoHistory { get; set; }
-        public string Mode { get; set; } = "live";
     }
 }

@@ -17,6 +17,7 @@ namespace Services
             _scheduleRepository = scheduleRepository;
         }
 
+
         public async Task<Schedule> CreateScheduleAsync(Schedule schedule)
         {
             if (schedule.StartTime >= schedule.EndTime)
@@ -51,43 +52,36 @@ namespace Services
             return await _scheduleRepository.DeleteScheduleAsync(scheduleId);
         }
 
-        public async Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime)
+        public async Task<Dictionary<string, List<Schedule>>> GetSchedulesGroupedTimelineAsync()
         {
-            return await _scheduleRepository.SearchSchedulesByTimeAsync(startTime, endTime);
+            var all = await _scheduleRepository.GetAllSchedulesAsync();
+
+            return new Dictionary<string, List<Schedule>>
+            {
+                ["Live Now"] = all.Where(s => s.Status == "Live").ToList(),
+                ["Upcoming"] = all.Where(s => s.Status == "Pending" || s.Status == "Ready").ToList(),
+                ["Replay"] = all.Where(s => s.Status == "Ended" || s.Status == "EndedEarly").ToList()
+            };
         }
 
-        public async Task<int> CountSchedulesAsync()
+        public async Task<IEnumerable<Schedule>> GetSchedulesByChannelAndDateAsync(int channelId, DateTime date)
         {
-            var schedules = await _scheduleRepository.GetAllSchedulesAsync();
-            return schedules.Count();
+            return await _scheduleRepository.GetSchedulesByChannelAndDateAsync(channelId, date);
         }
 
-        public async Task<int> CountSchedulesByStatusAsync(string status)
+        public async Task<IEnumerable<Schedule>> GetLiveNowSchedulesAsync()
         {
-            if (string.IsNullOrWhiteSpace(status))
-                throw new Exception("Status cannot be null or empty.");
-
-            var schedules = await _scheduleRepository.GetAllSchedulesAsync();
-            return schedules.Count(s => s.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
-        }
-        public async Task<Dictionary<string, int>> GetScheduleCountByStatusAsync()
-        {
-            var schedules = await _scheduleRepository.GetAllSchedulesAsync();
-            return schedules
-                .GroupBy(s => s.Status)
-                .ToDictionary(g => g.Key, g => g.Count());
+            return await _scheduleRepository.GetLiveNowSchedulesAsync();
         }
 
-        public async Task<IEnumerable<Schedule>> GetActiveSchedulesAsync()
+        public async Task<IEnumerable<Schedule>> GetUpcomingSchedulesAsync()
         {
-            return await _scheduleRepository.GetActiveSchedulesAsync();
+            return await _scheduleRepository.GetUpcomingSchedulesAsync();
         }
-        public async Task<IEnumerable<Schedule>> GetSchedulesByStatusAsync(string status)
+        public async Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date)
         {
-            return (await _scheduleRepository.GetAllSchedulesAsync())
-                   .Where(s => s.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+            return await _scheduleRepository.GetSchedulesByDateAsync(date);
         }
-
     }
 
 }

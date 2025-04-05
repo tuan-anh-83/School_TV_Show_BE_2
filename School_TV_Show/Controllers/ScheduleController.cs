@@ -19,97 +19,6 @@ namespace School_TV_Show.Controllers
             _scheduleService = scheduleService;
             _videoHistoryService = videoHistoryService;
         }
-        [HttpPost("manual-replay")]
-        [Authorize(Roles = "SchoolOwner,Admin")]
-        public async Task<IActionResult> CreateManualReplaySchedule([FromBody] CreateReplayScheduleRequest request)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(new ApiResponse(false, "Invalid request"));
-
-            var start = request.StartTime ?? DateTime.UtcNow;
-            var end = request.EndTime ?? start.AddMinutes(5);
-
-            var schedule = new Schedule
-            {
-                ProgramID = request.ProgramID,
-                StartTime = start,
-                EndTime = end,
-                Status = "Active",
-                Mode = "replay",
-
-            };
-
-            var result = await _scheduleService.CreateScheduleAsync(schedule);
-
-            if (schedule == null)
-                return StatusCode(500, new ApiResponse(false, "Failed to create replay schedule"));
-
-            return Ok(new ApiResponse(true, "Replay scheduled successfully", new
-            {
-                schedule.ScheduleID,
-                schedule.ProgramID,
-                schedule.Mode,
-                schedule.StartTime,
-                schedule.EndTime
-            }));
-        }
-
-        [HttpPost("replay")]
-        public async Task<IActionResult> CreateReplaySchedule([FromBody] CreateReplayScheduleRequest request)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(new ApiResponse(false, "Invalid input"));
-
-            var start = request.StartTime ?? DateTime.UtcNow;
-            var end = request.EndTime ?? start.AddMinutes(5);
-
-            var schedule = new Schedule
-            {
-                ProgramID = request.ProgramID,
-                StartTime = start,
-                EndTime = end,
-                Mode = "replay",
-                Status = "Active",
-            };
-
-            var success = await _scheduleService.CreateScheduleAsync(schedule);
-            if (schedule == null)
-                return StatusCode(500, new ApiResponse(false, "Failed to create replay schedule"));
-
-            return Ok(new ApiResponse(true, "Replay schedule created", new
-            {
-                schedule.ScheduleID,
-                schedule.ProgramID,
-                schedule.StartTime,
-                schedule.EndTime,
-                schedule.Mode,
-            }));
-        }
-
-        [HttpGet("dashboard/status-counts")]
-        public async Task<IActionResult> GetScheduleDashboardStatusCounts()
-        {
-            var counts = await _scheduleService.GetScheduleCountByStatusAsync();
-            return Ok(new ApiResponse(true, "Schedule status summary", counts));
-        }
-
-        [HttpGet("all")]
-        public async Task<IActionResult> GetAllSchedules()
-        {
-            var schedules = await _scheduleService.GetAllSchedulesAsync();
-            return Ok(new ApiResponse(true, "All schedules", schedules));
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetScheduleById(int id)
-        {
-            var schedule = await _scheduleService.GetScheduleByIdAsync(id);
-            if (schedule == null)
-                return NotFound(new ApiResponse(false, "Schedule not found"));
-
-            return Ok(new ApiResponse(true, "Schedule found", schedule));
-        }
-
         [HttpPost]
         public async Task<IActionResult> CreateSchedule([FromBody] CreateScheduleRequest request)
         {
@@ -121,12 +30,21 @@ namespace School_TV_Show.Controllers
                 ProgramID = request.ProgramID,
                 StartTime = request.StartTime,
                 EndTime = request.EndTime,
-                Mode = request.Mode,
-                Status = "Pending",
+                Status = "Pending"
             };
 
             var created = await _scheduleService.CreateScheduleAsync(schedule);
             return Ok(new ApiResponse(true, "Schedule created", new { scheduleId = created.ScheduleID }));
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetScheduleById(int id)
+        {
+            var schedule = await _scheduleService.GetScheduleByIdAsync(id);
+            if (schedule == null)
+                return NotFound(new ApiResponse(false, "Schedule not found"));
+
+            return Ok(new ApiResponse(true, "Schedule found", schedule));
         }
 
         [HttpPut("{id}")]
@@ -144,13 +62,11 @@ namespace School_TV_Show.Controllers
 
             existingSchedule.StartTime = request.StartTime;
             existingSchedule.EndTime = request.EndTime;
-            existingSchedule.Mode = request.Mode;
 
             var updated = await _scheduleService.UpdateScheduleAsync(existingSchedule);
-            if (!updated)
-                return StatusCode(500, new ApiResponse(false, "Failed to update schedule"));
-
-            return Ok(new ApiResponse(true, "Schedule updated successfully"));
+            return updated
+                ? Ok(new ApiResponse(true, "Schedule updated successfully"))
+                : StatusCode(500, new ApiResponse(false, "Failed to update schedule"));
         }
 
         [HttpDelete("{id}")]
@@ -164,31 +80,50 @@ namespace School_TV_Show.Controllers
                 return BadRequest(new ApiResponse(false, "Only 'Pending' schedules can be deleted"));
 
             var deleted = await _scheduleService.DeleteScheduleAsync(id);
-            if (!deleted)
-                return StatusCode(500, new ApiResponse(false, "Failed to delete schedule"));
-
-            return Ok(new ApiResponse(true, "Schedule deleted successfully"));
+            return deleted
+                ? Ok(new ApiResponse(true, "Schedule deleted successfully"))
+                : StatusCode(500, new ApiResponse(false, "Failed to delete schedule"));
         }
 
-        [HttpGet("status/{status}")]
-        public async Task<IActionResult> GetSchedulesByStatus(string status)
+        [HttpGet("by-channel-and-date")]
+        public async Task<IActionResult> GetSchedulesByChannelAndDate([FromQuery] int channelId, [FromQuery] DateTime date)
         {
-            var result = await _scheduleService.GetSchedulesByStatusAsync(status);
-            return Ok(new ApiResponse(true, $"Schedules with status '{status}'", result));
+            if (channelId <= 0)
+                return BadRequest(new ApiResponse(false, "Invalid channel ID"));
+
+            var schedules = await _scheduleService.GetSchedulesByChannelAndDateAsync(channelId, date);
+            return Ok(new ApiResponse(true, "Schedules for channel and date", schedules));
         }
 
-        [HttpGet("count-by-status/{status}")]
-        public async Task<IActionResult> GetScheduleCountByStatus(string status)
+        [HttpGet("timeline")]
+        public async Task<IActionResult> GetSchedulesByChannelAndDate()
         {
-            var count = await _scheduleService.CountSchedulesByStatusAsync(status);
-            return Ok(new ApiResponse(true, $"Count of schedules with status '{status}'", new { status, count }));
+            var result = await _scheduleService.GetSchedulesGroupedTimelineAsync();
+            return Ok(new ApiResponse(true, "Schedule timeline", result));
         }
 
-        [HttpGet("count-by-status")]
-        public async Task<IActionResult> GetScheduleCountsByStatus()
+        [HttpGet("by-date")]
+        [Authorize(Roles = "User,SchoolOwner,Admin")]
+        public async Task<IActionResult> GetSchedulesByDate([FromQuery] DateTime date)
         {
-            var result = await _scheduleService.GetScheduleCountByStatusAsync();
-            return Ok(new ApiResponse(true, "All status counts", result));
+            var schedules = await _scheduleService.GetSchedulesByDateAsync(date);
+            var result = schedules.Select(s => new
+            {
+                s.ScheduleID,
+                s.StartTime,
+                s.EndTime,
+                s.Status,
+                s.ProgramID,
+                Program = new
+                {
+                    s.Program?.ProgramID,
+                    s.Program?.ProgramName,
+                    s.Program?.Title,
+                    s.Program?.SchoolChannel?.Name
+                }
+            });
+
+            return Ok(result);
         }
     }
 }

@@ -19,12 +19,14 @@ namespace BOs.Models
 
         [Required]
         public string Content { get; set; }
+
         public int Quantity { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        public Account Account { get; set; }
+        public string Status { get; set; } = "Active";
+
         public VideoHistory VideoHistory { get; set; }
     }
 }

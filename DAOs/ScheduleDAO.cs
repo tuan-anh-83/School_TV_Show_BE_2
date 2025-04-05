@@ -35,8 +35,7 @@ namespace DAOs
             if (schedule.StartTime >= schedule.EndTime)
                 throw new Exception("StartTime must be earlier than EndTime.");
 
-            if (string.IsNullOrWhiteSpace(schedule.Status))
-                schedule.Status = "Active";
+            schedule.Status = string.IsNullOrWhiteSpace(schedule.Status) ? "Pending" : schedule.Status;
 
             _context.Schedules.Add(schedule);
             await _context.SaveChangesAsync();
@@ -45,15 +44,21 @@ namespace DAOs
 
         public async Task<Schedule> GetScheduleByIdAsync(int scheduleId)
         {
-            var schedule = await _context.Schedules.FirstOrDefaultAsync(s => s.ScheduleID == scheduleId);
+            var schedule = await _context.Schedules
+                .Include(s => s.Program)
+                .FirstOrDefaultAsync(s => s.ScheduleID == scheduleId);
+
             if (schedule == null)
                 throw new Exception("Schedule not found.");
+
             return schedule;
         }
 
         public async Task<IEnumerable<Schedule>> GetAllSchedulesAsync()
         {
-            return await _context.Schedules.ToListAsync();
+            return await _context.Schedules
+                .Include(s => s.Program)
+                .ToListAsync();
         }
 
         public async Task<bool> UpdateScheduleAsync(Schedule schedule)
@@ -85,22 +90,62 @@ namespace DAOs
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime)
-        {
-            if (startTime >= endTime)
-                throw new Exception("StartTime must be earlier than EndTime.");
-
-            return await _context.Schedules
-                .Where(s => s.StartTime >= startTime && s.EndTime <= endTime)
-                .Include(s => s.Program)
-                .ToListAsync();
-        }
         public async Task<IEnumerable<Schedule>> GetActiveSchedulesAsync()
         {
             return await _context.Schedules
-                .Where(s => s.Status == "Active")
+                .Where(s => s.Status == "Active" || s.Status == "Ready" || s.Status == "Live")
                 .Include(s => s.Program)
-                .Include(s => s.VideoHistory)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Schedule>> GetLiveNowSchedulesAsync()
+        {
+            return await _context.Schedules
+                .Where(s => s.Status == "Live")
+                .Include(s => s.Program)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Schedule>> GetUpcomingSchedulesAsync()
+        {
+            return await _context.Schedules
+                .Where(s => s.Status == "Pending" || s.Status == "Ready")
+                .Include(s => s.Program)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Schedule>> GetSchedulesByChannelAndDateAsync(int channelId, DateTime date)
+        {
+            var start = date.Date;
+            var end = start.AddDays(1);
+
+            return await _context.Schedules
+                .Where(s =>
+                    s.Program.SchoolChannelID == channelId &&
+                    s.StartTime >= start &&
+                    s.StartTime < end)
+                .Include(s => s.Program)
+                .ToListAsync();
+        }
+
+        public async Task<Dictionary<string, List<Schedule>>> GetSchedulesGroupedTimelineAsync()
+        {
+            var all = await GetAllSchedulesAsync();
+            var result = new Dictionary<string, List<Schedule>>
+            {
+                ["Live Now"] = all.Where(s => s.Status == "Live").ToList(),
+                ["Upcoming"] = all.Where(s => s.Status == "Pending" || s.Status == "Ready").ToList(),
+                ["Replay"] = all.Where(s => s.Status == "Ended" || s.Status == "EndedEarly").ToList()
+            };
+
+            return result;
+        }
+        public async Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date)
+        {
+            return await _context.Schedules
+                .Include(s => s.Program)
+                    .ThenInclude(p => p.SchoolChannel)
+                .Where(s => s.StartTime.Date == date.Date)
                 .ToListAsync();
         }
 

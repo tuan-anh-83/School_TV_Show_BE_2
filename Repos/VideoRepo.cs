@@ -62,5 +62,13 @@ namespace Repos
         {
             return await VideoDAO.Instance.GetLatestLiveStreamByProgramIdAsync(programId);
         }
+        public async Task<List<VideoHistory>> GetAllVideoHistoriesAsync()
+        {
+            return await VideoDAO.Instance.GetAllVideoHistoriesAsync(); 
+        }
+        public async Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date)
+        {
+            return await VideoDAO.Instance.GetVideosByDateAsync(date);
+        }
     }
 }

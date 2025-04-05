@@ -10,6 +10,7 @@ namespace Services
     public interface ILiveStreamService
     {
         Task<bool> StartLiveStreamAsync(VideoHistory stream);
+        Task<bool> CheckStreamerStartedAsync(string cloudflareStreamId);
         Task<bool> EndLiveStreamAsync(VideoHistory stream);
         Task<IEnumerable<VideoHistory>> GetActiveLiveStreamsAsync();
         Task<VideoHistory> GetLiveStreamByIdAsync(int id);

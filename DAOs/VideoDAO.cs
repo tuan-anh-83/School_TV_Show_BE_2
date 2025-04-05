@@ -31,6 +31,14 @@ namespace DAOs
             }
         }
 
+        public async Task<List<VideoHistory>> GetAllVideoHistoriesAsync()
+        {
+            return await _context.VideoHistories
+                .Include(v => v.Program)
+                    .ThenInclude(p => p.SchoolChannel)
+                .ToListAsync();
+        }
+
         public async Task<List<VideoHistory>> GetAllVideosAsync()
         {
             return await _context.VideoHistories
@@ -140,6 +148,14 @@ namespace DAOs
         public async Task<int> CountTotalVideosAsync()
         {
             return await _context.VideoHistories.CountAsync();
+        }
+        public async Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date)
+        {
+            return await _context.VideoHistories
+                .Where(v => v.Status == true && v.CreatedAt.Date == date.Date)
+                .OrderBy(v => v.CreatedAt)
+                .Include(v => v.Program)
+                .ToListAsync();
         }
     }
 }

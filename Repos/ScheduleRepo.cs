@@ -2,46 +2,65 @@
 using DAOs;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repos
 {
     public class ScheduleRepo : IScheduleRepo
     {
-        public Task<Schedule> CreateScheduleAsync(Schedule schedule)
+        public async Task<Schedule> CreateScheduleAsync(Schedule schedule)
         {
-            return  ScheduleDAO.Instance.CreateScheduleAsync(schedule);
+            return await ScheduleDAO.Instance.CreateScheduleAsync(schedule);
         }
 
-        public Task<bool> DeleteScheduleAsync(int scheduleId)
+        public async Task<bool> DeleteScheduleAsync(int scheduleId)
         {
-            return  ScheduleDAO.Instance.DeleteScheduleAsync(scheduleId);
+            return await ScheduleDAO.Instance.DeleteScheduleAsync(scheduleId);
         }
 
-        public Task<IEnumerable<Schedule>> GetAllSchedulesAsync()
+        public async Task<IEnumerable<Schedule>> GetAllSchedulesAsync()
         {
-            return  ScheduleDAO.Instance.GetAllSchedulesAsync();
+            return await ScheduleDAO.Instance.GetAllSchedulesAsync();
         }
 
-        public Task<Schedule> GetScheduleByIdAsync(int scheduleId)
+        public async Task<Schedule> GetScheduleByIdAsync(int scheduleId)
         {
-            return  ScheduleDAO.Instance.GetScheduleByIdAsync(scheduleId);
+            return await ScheduleDAO.Instance.GetScheduleByIdAsync(scheduleId);
         }
 
-        public Task<bool> UpdateScheduleAsync(Schedule schedule)
+        public async Task<bool> UpdateScheduleAsync(Schedule schedule)
         {
-            return  ScheduleDAO.Instance.UpdateScheduleAsync(schedule);
-        }
-        public Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime)
-        {
-            return ScheduleDAO.Instance.SearchSchedulesByTimeAsync(startTime, endTime);
+            return await ScheduleDAO.Instance.UpdateScheduleAsync(schedule);
         }
 
-        public Task<IEnumerable<Schedule>> GetActiveSchedulesAsync()
+        public async Task<IEnumerable<Schedule>> GetActiveSchedulesAsync()
         {
-            return ScheduleDAO.Instance.GetActiveSchedulesAsync();
+            return await ScheduleDAO.Instance.GetActiveSchedulesAsync();
+        }
+
+        public async Task<IEnumerable<Schedule>> GetLiveNowSchedulesAsync()
+        {
+            return await ScheduleDAO.Instance.GetLiveNowSchedulesAsync();
+        }
+
+        public async Task<IEnumerable<Schedule>> GetUpcomingSchedulesAsync()
+        {
+            return await ScheduleDAO.Instance.GetUpcomingSchedulesAsync();
+        }
+
+        public async Task<Dictionary<string, List<Schedule>>> GetSchedulesGroupedTimelineAsync()
+        {
+            return await ScheduleDAO.Instance.GetSchedulesGroupedTimelineAsync();
+        }
+
+        public async Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date)
+        {
+            return await ScheduleDAO.Instance.GetSchedulesByDateAsync(date);
+        }
+
+        public async Task<IEnumerable<Schedule>> GetSchedulesByChannelAndDateAsync(int channelId, DateTime date)
+        {
+            return await ScheduleDAO.Instance.GetSchedulesByChannelAndDateAsync(channelId, date);
         }
     }
 }

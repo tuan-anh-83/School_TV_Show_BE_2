@@ -23,6 +23,7 @@ namespace School_TV_Show.Controllers
         private readonly ITokenService _tokenService;
         private readonly IEmailService _emailService;
         private readonly IPasswordHasher<Account> _passwordHasher;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<AccountController> _logger;
 
         public AccountController(
@@ -30,13 +31,15 @@ namespace School_TV_Show.Controllers
             ITokenService tokenService,
             IEmailService emailService,
             IPasswordHasher<Account> passwordHasher,
-            ILogger<AccountController> logger)
+            ILogger<AccountController> logger,
+            IConfiguration configuration)
         {
             _accountService = accountService;
             _tokenService = tokenService;
             _emailService = emailService;
             _passwordHasher = passwordHasher;
             _logger = logger;
+            _configuration = configuration;
         }
 
         #region Registration Endpoints
@@ -311,7 +314,7 @@ namespace School_TV_Show.Controllers
         #region Login & External Authentication
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginRequest)
+        public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
             if (!ModelState.IsValid)
             {
@@ -546,16 +549,19 @@ namespace School_TV_Show.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
             var account = await _accountService.GetAccountByEmailAsync(request.Email);
             if (account == null)
             {
                 return Ok(new { message = "If an account with that email exists, you will receive a password reset email." });
             }
+
             var token = Guid.NewGuid().ToString();
             var expiration = DateTime.UtcNow.AddHours(1);
             await _accountService.SavePasswordResetTokenAsync(account.AccountID, token, expiration);
-            var resetLink = Url.Action("ResetPassword", "Account", new { email = request.Email, token = token }, Request.Scheme);
-            await _emailService.SendPasswordResetEmailAsync(request.Email, resetLink);
+
+            await _emailService.SendPasswordResetEmailAsync(request.Email, token);
+
             return Ok(new { message = "If an account with that email exists, you will receive a password reset email." });
         }
 
@@ -637,18 +643,21 @@ namespace School_TV_Show.Controllers
             var accounts = await _accountService.GetAllAccountsAsync();
             return Ok(accounts);
         }
-
         [Authorize(Roles = "Admin")]
         [HttpPatch("admin/assign-role/{id}")]
         public async Task<IActionResult> AssignRole(int id, [FromBody] RoleAssignmentRequestDTO request)
         {
             if (id <= 0)
                 return BadRequest("Invalid account ID.");
-            var account = await _accountService.GetAccountByIdAsync(id);
-            if (account == null)
+            var targetAccount = await _accountService.GetAccountByIdAsync(id);
+            if (targetAccount == null)
                 return NotFound("Account not found.");
-            account.RoleID = request.RoleID;
-            bool result = await _accountService.UpdateAccountAsync(account);
+            if (targetAccount.RoleID == 3)
+            {
+                return BadRequest("You can't change the role of another admin.");
+            }
+            targetAccount.RoleID = request.RoleID;
+            bool result = await _accountService.UpdateAccountAsync(targetAccount);
             return result ? Ok("Role assigned successfully.") : StatusCode(500, "Failed to assign role.");
         }
 

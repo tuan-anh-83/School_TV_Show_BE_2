@@ -4,6 +4,7 @@
     {
         public string AccountId { get; set; } = string.Empty;
         public string ApiToken { get; set; } = string.Empty;
-        public string ApiEmail { get; set; } = string.Empty;
+        public string StreamDomain { get; set; }
+        public double Duration { get; set; }
     }
 }

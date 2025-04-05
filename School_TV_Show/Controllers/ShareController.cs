@@ -1,7 +1,9 @@
 ﻿using BOs.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using School_TV_Show.DTO;
+using Services.Hubs;
 using Services;
 using System.Security.Claims;
 
@@ -11,19 +13,23 @@ namespace School_TV_Show.Controllers
     [Route("api/[controller]")]
     public class ShareController : ControllerBase
     {
-
         private readonly IShareService _shareService;
         private readonly IVideoService _videoService;
         private readonly ILogger<ShareController> _logger;
+        private readonly IHubContext<LiveStreamHub> _hubContext;
 
-        public ShareController(IShareService shareService, IVideoService videoService, ILogger<ShareController> logger)
+        public ShareController(
+            IShareService shareService,
+            IVideoService videoService,
+            ILogger<ShareController> logger,
+            IHubContext<LiveStreamHub> hubContext)
         {
             _shareService = shareService;
             _videoService = videoService;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
-        // GET: api/share
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAllShares()
@@ -39,7 +45,7 @@ namespace School_TV_Show.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-        // GET: api/share/all
+
         [Authorize(Roles = "User,SchoolOwner,Admin")]
         [HttpGet("active")]
         public async Task<IActionResult> GetAllActiveShares()
@@ -56,8 +62,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-
-        // GET: api/share/{id}
         [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetShareById(int id)
@@ -77,7 +81,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // GET: api/share/total/{videoHistoryId}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpGet("total/{videoHistoryId}")]
         public async Task<IActionResult> GetTotalSharesForVideo(int videoHistoryId)
@@ -94,29 +97,19 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // POST: api/share
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpPost]
         public async Task<IActionResult> AddShare([FromBody] CreateShareRequest request)
         {
             if (!ModelState.IsValid)
             {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                                              .ToList();
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
                 return BadRequest(new { errors });
             }
 
             var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (accountIdClaim == null)
-            {
-                return Unauthorized("User is not authenticated.");
-            }
-
-            if (!int.TryParse(accountIdClaim.Value, out int accountId))
-            {
-                return Unauthorized("Invalid account identifier.");
-            }
+            if (accountIdClaim == null || !int.TryParse(accountIdClaim.Value, out int accountId))
+                return Unauthorized("Invalid user.");
 
             var share = new Share
             {
@@ -127,17 +120,18 @@ namespace School_TV_Show.Controllers
 
             var video = await _videoService.GetVideoByIdAsync(request.VideoHistoryID);
             if (video == null || !video.Status)
-            {
                 return BadRequest("The specified video does not exist or is not active.");
-            }
 
             try
             {
                 var result = await _shareService.AddShareAsync(share);
                 if (!result)
-                {
                     return BadRequest("Invalid VideoHistoryID or AccountID.");
-                }
+
+                var totalShares = await _shareService.GetTotalSharesForVideoAsync(video.VideoHistoryID);
+                await _hubContext.Clients.Group(video.CloudflareStreamId)
+                    .SendAsync("ShareUpdated", new { videoId = video.VideoHistoryID, totalShares });
+
                 return CreatedAtAction(nameof(GetShareById), new { id = share.ShareID }, share);
             }
             catch (Exception ex)
@@ -147,37 +141,29 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // PUT: api/share/{id}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateShare(int id, [FromBody] UpdateShareRequest request)
         {
             if (!ModelState.IsValid)
             {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                                              .ToList();
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
                 return BadRequest(new { errors });
             }
 
             var share = await _shareService.GetShareByIdAsync(id);
             if (share == null)
-            {
                 return NotFound("Share not found");
-            }
 
             if (share.Quantity <= 0)
-            {
                 return BadRequest("Shares with zero or negative quantity cannot be updated.");
-            }
 
             try
             {
                 var result = await _shareService.UpdateShareAsync(share);
                 if (!result)
-                {
                     return BadRequest("Invalid VideoHistoryID or AccountID.");
-                }
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -187,7 +173,6 @@ namespace School_TV_Show.Controllers
             }
         }
 
-        // DELETE: api/share/{id}
         [Authorize(Roles = "User,SchoolOwner")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteShare(int id)

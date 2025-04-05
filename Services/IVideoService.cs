@@ -19,5 +19,7 @@ namespace Services
         Task<int> GetTotalVideosByStatusAsync(bool status);
         Task<(int totalViews, int totalLikes)> GetTotalViewsAndLikesAsync();
         Task<int> GetVideosByDateRangeAsync(DateTime startDate, DateTime endDate);
+        Task<List<VideoHistory>> GetAllVideoHistoriesAsync();
+        Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date);
     }
 }

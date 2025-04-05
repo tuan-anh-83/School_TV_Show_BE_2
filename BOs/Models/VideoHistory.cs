@@ -10,8 +10,7 @@ namespace BOs.Models
     public class VideoHistory
     {
         public int VideoHistoryID { get; set; }
-        public int ProgramID { get; set; }
-
+        public int? ProgramID { get; set; }
         [Required]
         [MaxLength(500)]
         public string URL { get; set; }
@@ -28,10 +27,13 @@ namespace BOs.Models
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public DateTime StreamAt { get; set; }
+        public double? Duration { get; set; }
 
         public Program Program { get; set; }
-        public ICollection<VideoView> VideoViews { get; set; }
         public ICollection<VideoLike> VideoLikes { get; set; }
+        public ICollection<VideoView> VideoViews { get; set; }
+        public ICollection<Share> Shares { get; set; }
+        public ICollection<Comment> Comments { get; set; }
 
         [MaxLength(100)]
         public string? CloudflareStreamId { get; set; }

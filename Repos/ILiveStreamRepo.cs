@@ -11,6 +11,7 @@ namespace Repos
     {
         Task<bool> AddVideoHistoryAsync(VideoHistory stream);
         Task<bool> UpdateVideoHistoryAsync(VideoHistory stream);
+        Task<List<Schedule>> GetWaitingToStartStreamsAsync();
         Task<Program> GetProgramByIdAsync(int id);
         Task<bool> UpdateProgramAsync(Program program);
         Task<bool> AddLikeAsync(VideoLike like);
@@ -25,8 +26,9 @@ namespace Repos
         Task<bool> CreateProgramAsync(Program program);
         Task<VideoHistory> GetRecordedVideoByStreamIdAsync(string streamId);
         Task<List<Schedule>> GetLateStartCandidatesAsync(DateTime thresholdTime);
-        Task<bool> UpdateScheduleAsync(Schedule schedule);
-
+        void UpdateSchedule(Schedule schedule);
+        Task<List<Schedule>> GetLiveSchedulesAsync();
+        Task<List<Schedule>> GetOverdueSchedulesAsync(DateTime currentTime);
         Task<List<Schedule>> GetPendingSchedulesAsync(DateTime time);
         Task<List<Schedule>> GetReadySchedulesAsync(DateTime time);
         Task<List<Schedule>> GetEndingSchedulesAsync(DateTime time);
@@ -34,5 +36,8 @@ namespace Repos
         Task<int?> GetFallbackAdVideoHistoryIdAsync();
         Task AddScheduleAsync(Schedule schedule);
         Task SaveChangesAsync();
+        Task<List<Schedule>> GetLateStartSchedulesPastEndTimeAsync(DateTime now);
+        Task UpdateAsync(Schedule schedule);
+        Task<VideoHistory?> GetVideoHistoryByProgramIdAsync(int programId);
     }
 }

@@ -12,15 +12,13 @@ namespace Services
         Task<Schedule> CreateScheduleAsync(Schedule schedule);
         Task<Schedule> GetScheduleByIdAsync(int scheduleId);
         Task<IEnumerable<Schedule>> GetAllSchedulesAsync();
-        Task<IEnumerable<Schedule>> GetActiveSchedulesAsync();
-        Task<IEnumerable<Schedule>> SearchSchedulesByTimeAsync(DateTime startTime, DateTime endTime);
-
         Task<bool> UpdateScheduleAsync(Schedule schedule);
         Task<bool> DeleteScheduleAsync(int scheduleId);
 
-        Task<int> CountSchedulesAsync();
-        Task<int> CountSchedulesByStatusAsync(string status);
-        Task<Dictionary<string, int>> GetScheduleCountByStatusAsync();
-        Task<IEnumerable<Schedule>> GetSchedulesByStatusAsync(string status);
+        Task<Dictionary<string, List<Schedule>>> GetSchedulesGroupedTimelineAsync();
+        Task<IEnumerable<Schedule>> GetSchedulesByChannelAndDateAsync(int channelId, DateTime date);
+        Task<IEnumerable<Schedule>> GetLiveNowSchedulesAsync();
+        Task<IEnumerable<Schedule>> GetUpcomingSchedulesAsync();
+        Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date);
     }
 }
