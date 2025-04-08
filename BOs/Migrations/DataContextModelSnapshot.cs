@@ -140,6 +140,7 @@ namespace BOs.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -184,6 +185,43 @@ namespace BOs.Migrations
                     b.HasIndex("VideoHistoryID");
 
                     b.ToTable("Comment", (string)null);
+                });
+
+            modelBuilder.Entity("BOs.Models.Membership", b =>
+                {
+                    b.Property<int>("MembershipID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MembershipID"));
+
+                    b.Property<int>("AccountID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("PackageID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RemainingDuration")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MembershipID");
+
+                    b.HasIndex("AccountID");
+
+                    b.HasIndex("PackageID");
+
+                    b.ToTable("Membership", (string)null);
                 });
 
             modelBuilder.Entity("BOs.Models.News", b =>
@@ -324,9 +362,6 @@ namespace BOs.Migrations
                     b.Property<int>("PackageID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PackageID1")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
@@ -338,8 +373,6 @@ namespace BOs.Migrations
                     b.HasIndex("OrderID");
 
                     b.HasIndex("PackageID");
-
-                    b.HasIndex("PackageID1");
 
                     b.ToTable("OrderDetail", (string)null);
                 });
@@ -932,6 +965,25 @@ namespace BOs.Migrations
                     b.Navigation("VideoHistory");
                 });
 
+            modelBuilder.Entity("BOs.Models.Membership", b =>
+                {
+                    b.HasOne("BOs.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BOs.Models.Package", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Package");
+                });
+
             modelBuilder.Entity("BOs.Models.News", b =>
                 {
                     b.HasOne("BOs.Models.CategoryNews", "CategoryNews")
@@ -981,14 +1033,10 @@ namespace BOs.Migrations
                         .IsRequired();
 
                     b.HasOne("BOs.Models.Package", "Package")
-                        .WithMany()
+                        .WithMany("OrderDetails")
                         .HasForeignKey("PackageID")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.HasOne("BOs.Models.Package", null)
-                        .WithMany("OrderDetails")
-                        .HasForeignKey("PackageID1");
 
                     b.Navigation("Order");
 

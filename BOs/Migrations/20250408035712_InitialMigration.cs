@@ -37,7 +37,7 @@ namespace BOs.Migrations
                     CategoryNewsID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     CategoryName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true)
+                    Description = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -54,7 +54,7 @@ namespace BOs.Migrations
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Duration = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "Active"),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false, defaultValue: "True"),
                     CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()")
                 },
@@ -104,6 +104,35 @@ namespace BOs.Migrations
                         principalTable: "Role",
                         principalColumn: "RoleID",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Membership",
+                columns: table => new
+                {
+                    MembershipID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AccountID = table.Column<int>(type: "int", nullable: false),
+                    PackageID = table.Column<int>(type: "int", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpirationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RemainingDuration = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Membership", x => x.MembershipID);
+                    table.ForeignKey(
+                        name: "FK_Membership_Account_AccountID",
+                        column: x => x.AccountID,
+                        principalTable: "Account",
+                        principalColumn: "AccountID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Membership_Package_PackageID",
+                        column: x => x.PackageID,
+                        principalTable: "Package",
+                        principalColumn: "PackageID");
                 });
 
             migrationBuilder.CreateTable(
@@ -202,8 +231,7 @@ namespace BOs.Migrations
                         name: "FK_OrderDetail_Package_PackageID",
                         column: x => x.PackageID,
                         principalTable: "Package",
-                        principalColumn: "PackageID",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "PackageID");
                 });
 
             migrationBuilder.CreateTable(
@@ -267,7 +295,7 @@ namespace BOs.Migrations
                     ProgramID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     SchoolChannelID = table.Column<int>(type: "int", nullable: false),
-                    CloudflareStreamId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CloudflareStreamId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     ProgramName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     Title = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     Link = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
@@ -389,15 +417,16 @@ namespace BOs.Migrations
                 {
                     VideoHistoryID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ProgramID = table.Column<int>(type: "int", nullable: false),
+                    ProgramID = table.Column<int>(type: "int", nullable: true),
                     URL = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    MP4Url = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MP4Url = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     Type = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     Status = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     StreamAt = table.Column<DateTime>(type: "datetime", nullable: false),
+                    Duration = table.Column<double>(type: "float", nullable: true),
                     CloudflareStreamId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     PlaybackUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
@@ -408,7 +437,8 @@ namespace BOs.Migrations
                         name: "FK_VideoHistory_Program_ProgramID",
                         column: x => x.ProgramID,
                         principalTable: "Program",
-                        principalColumn: "ProgramID");
+                        principalColumn: "ProgramID",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -421,16 +451,12 @@ namespace BOs.Migrations
                     VideoHistoryID = table.Column<int>(type: "int", nullable: false),
                     Content = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()")
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()"),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Comment", x => x.CommentID);
-                    table.ForeignKey(
-                        name: "FK_Comment_Account_AccountID",
-                        column: x => x.AccountID,
-                        principalTable: "Account",
-                        principalColumn: "AccountID");
                     table.ForeignKey(
                         name: "FK_Comment_VideoHistory_VideoHistoryID",
                         column: x => x.VideoHistoryID,
@@ -475,11 +501,11 @@ namespace BOs.Migrations
                     ProgramID = table.Column<int>(type: "int", nullable: false),
                     StartTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "Active"),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
                     LiveStreamStarted = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     LiveStreamEnded = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    VideoHistoryID = table.Column<int>(type: "int", nullable: true),
-                    Mode = table.Column<string>(type: "nvarchar(max)", nullable: false, defaultValue: "Live")
+                    IsReplay = table.Column<bool>(type: "bit", nullable: false),
+                    VideoHistoryID = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -511,12 +537,6 @@ namespace BOs.Migrations
                 {
                     table.PrimaryKey("PK_Share", x => x.ShareID);
                     table.ForeignKey(
-                        name: "FK_Share_Account_AccountID",
-                        column: x => x.AccountID,
-                        principalTable: "Account",
-                        principalColumn: "AccountID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_Share_VideoHistory_VideoHistoryID",
                         column: x => x.VideoHistoryID,
                         principalTable: "VideoHistory",
@@ -537,12 +557,6 @@ namespace BOs.Migrations
                 {
                     table.PrimaryKey("PK_VideoLike", x => x.LikeID);
                     table.ForeignKey(
-                        name: "FK_VideoLike_Account_AccountID",
-                        column: x => x.AccountID,
-                        principalTable: "Account",
-                        principalColumn: "AccountID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_VideoLike_VideoHistory_VideoHistoryID",
                         column: x => x.VideoHistoryID,
                         principalTable: "VideoHistory",
@@ -555,6 +569,7 @@ namespace BOs.Migrations
                 {
                     ViewID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    AccountID = table.Column<int>(type: "int", nullable: false),
                     VideoHistoryID = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false)
                 },
@@ -585,14 +600,19 @@ namespace BOs.Migrations
                 column: "RoleID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Comment_AccountID",
-                table: "Comment",
-                column: "AccountID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Comment_VideoHistoryID",
                 table: "Comment",
                 column: "VideoHistoryID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Membership_AccountID",
+                table: "Membership",
+                column: "AccountID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Membership_PackageID",
+                table: "Membership",
+                column: "PackageID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_News_CategoryNewsID",
@@ -691,11 +711,6 @@ namespace BOs.Migrations
                 column: "SchoolChannelID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Share_AccountID",
-                table: "Share",
-                column: "AccountID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Share_VideoHistoryID",
                 table: "Share",
                 column: "VideoHistoryID");
@@ -704,11 +719,6 @@ namespace BOs.Migrations
                 name: "IX_VideoHistory_ProgramID",
                 table: "VideoHistory",
                 column: "ProgramID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VideoLike_AccountID",
-                table: "VideoLike",
-                column: "AccountID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VideoLike_VideoHistoryID",
@@ -729,6 +739,9 @@ namespace BOs.Migrations
 
             migrationBuilder.DropTable(
                 name: "Comment");
+
+            migrationBuilder.DropTable(
+                name: "Membership");
 
             migrationBuilder.DropTable(
                 name: "NewsPicture");

@@ -456,7 +456,7 @@ namespace BOs.Data
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.Package)
-                      .WithMany()
+                      .WithMany(p => p.OrderDetails) 
                       .HasForeignKey(e => e.PackageID)
                       .OnDelete(DeleteBehavior.NoAction);
             });
@@ -588,6 +588,38 @@ namespace BOs.Data
                     .HasDefaultValueSql("GETDATE()");
             });
 
+            #endregion
+
+            #region Membership 
+            modelBuilder.Entity<Membership>(entity => { 
+                entity.ToTable("Membership");
+                entity.HasKey(e => e.MembershipID);
+                entity.Property(e => e.MembershipID).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.StartDate)
+                      .IsRequired();
+
+                entity.Property(e => e.ExpirationDate)
+                      .IsRequired();
+
+                entity.Property(e => e.RemainingDuration)
+                      .IsRequired();
+
+                entity.Property(e => e.IsActive)
+                      .IsRequired()
+                      .HasDefaultValue(true);
+
+                entity.HasOne(e => e.Account)
+                      .WithMany()
+                      .HasForeignKey(e => e.AccountID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Package)
+                      .WithMany()
+                      .HasForeignKey(e => e.PackageID)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+            });
             #endregion
         }
 
