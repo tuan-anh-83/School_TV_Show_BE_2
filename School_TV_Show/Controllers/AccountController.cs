@@ -314,7 +314,7 @@ namespace School_TV_Show.Controllers
         #region Login & External Authentication
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
+        public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginRequest)
         {
             if (!ModelState.IsValid)
             {
