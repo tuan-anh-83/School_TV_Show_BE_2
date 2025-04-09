@@ -30,6 +30,15 @@ namespace DAOs
             }
         }
 
+        public async Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId)
+        {
+            return await _context.Programs
+                .Where(p => p.SchoolChannelID == channelId && p.Status == "Active")
+                .Include(p => p.SchoolChannel)
+                .Include(p => p.Schedules)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Program>> GetAllProgramsAsync()
         {
             return await _context.Programs

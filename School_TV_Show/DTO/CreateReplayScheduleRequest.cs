@@ -1,10 +1,17 @@
-﻿namespace School_TV_Show.DTO
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace School_TV_Show.DTO
 {
 
     public class CreateReplayScheduleRequest
     {
-        public int ProgramID { get; set; }
-        public DateTime? StartTime { get; set; }
-        public DateTime? EndTime { get; set; }
+        [Required]
+        public int VideoHistoryId { get; set; }
+
+        [Required]
+        public DateTime StartTime { get; set; }
+
+        [Required]
+        public DateTime EndTime { get; set; }
     }
 }

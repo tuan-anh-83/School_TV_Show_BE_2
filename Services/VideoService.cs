@@ -1,11 +1,14 @@
 ﻿using BOs.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Repos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Services
@@ -14,41 +17,22 @@ namespace Services
     {
         private readonly IVideoRepo _videoRepo;
         private readonly ILogger<VideoService> _logger;
-        private readonly ICloudflareUploadService _cloudflareUploadService;
+        private readonly CloudflareSettings _cloudflareSettings;
 
-        public VideoService(IVideoRepo videoRepo, ILogger<VideoService> logger, ICloudflareUploadService cloudflareUploadService)
+        public VideoService(IVideoRepo videoRepo, ILogger<VideoService> logger, IOptions<CloudflareSettings> cloudflareOptions)
         {
             _videoRepo = videoRepo;
             _logger = logger;
-            _cloudflareUploadService = cloudflareUploadService;
-        }
-        public async Task<bool> AddVideoWithCloudflareAsync(IFormFile videoFile, VideoHistory videoHistory)
-        {
-            try
-            {
-                var (streamId, playbackUrl, mp4Url) = await _cloudflareUploadService.UploadVideoAsync(videoFile);
-                videoHistory.CloudflareStreamId = streamId;
-                videoHistory.PlaybackUrl = playbackUrl;
-                videoHistory.MP4Url = mp4Url;
-                videoHistory.URL = playbackUrl;
-                videoHistory.CreatedAt = DateTime.UtcNow;
-                videoHistory.UpdatedAt = DateTime.UtcNow;
-
-                return await _videoRepo.AddVideoAsync(videoHistory);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error uploading video to Cloudflare.");
-                return false;
-            }
-        }
-        public async Task<List<VideoHistory>> GetAllVideoHistoriesAsync()
-        {
-            return await _videoRepo.GetAllVideoHistoriesAsync();
+            _cloudflareSettings = cloudflareOptions.Value;
         }
         public async Task<List<VideoHistory>> GetAllVideosAsync()
         {
             return await _videoRepo.GetAllVideosAsync();
+        }
+
+        public async Task<List<VideoHistory>> GetAllVideoHistoriesAsync()
+        {
+            return await _videoRepo.GetAllVideoHistoriesAsync();
         }
 
         public async Task<VideoHistory?> GetVideoByIdAsync(int videoHistoryId)
@@ -63,22 +47,12 @@ namespace Services
 
         public async Task<bool> UpdateVideoAsync(VideoHistory videoHistory)
         {
-            var result = await _videoRepo.UpdateVideoAsync(videoHistory);
-            if (!result)
-            {
-                _logger.LogError($"Failed to update video with ID {videoHistory.VideoHistoryID}.");
-            }
-            return result;
+            return await _videoRepo.UpdateVideoAsync(videoHistory);
         }
 
         public async Task<bool> DeleteVideoAsync(int videoHistoryId)
         {
-            var result = await _videoRepo.DeleteVideoAsync(videoHistoryId);
-            if (!result)
-            {
-                _logger.LogError($"Failed to delete video with ID {videoHistoryId}.");
-            }
-            return result;
+            return await _videoRepo.DeleteVideoAsync(videoHistoryId);
         }
 
         public async Task<int> GetTotalVideosAsync()
@@ -100,9 +74,81 @@ namespace Services
         {
             return await _videoRepo.CountByDateRangeAsync(startDate, endDate);
         }
+
         public async Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date)
         {
             return await _videoRepo.GetVideosByDateAsync(date);
+        }
+
+        public async Task<VideoHistory?> GetReplayVideoAsync(int programId, DateTime startTime, DateTime endTime)
+        {
+            return await _videoRepo.GetReplayVideoAsync(programId, startTime, endTime);
+        }
+
+        public async Task<VideoHistory?> GetReplayVideoByProgramAndTimeAsync(int programId, DateTime start, DateTime end)
+        {
+            return await _videoRepo.GetReplayVideoByProgramAndTimeAsync(programId, start, end);
+        }
+
+        public async Task<bool> AddVideoWithCloudflareAsync(IFormFile file, VideoHistory videoHistory)
+        {
+            try
+            {
+                var stream = file.OpenReadStream();
+                var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _cloudflareSettings.ApiToken);
+
+                var requestContent = new MultipartFormDataContent();
+                requestContent.Add(new StreamContent(stream), "file", file.FileName);
+
+                var uploadUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream";
+                var response = await httpClient.PostAsync(uploadUrl, requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                    return false;
+
+                var uploadResult = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(uploadResult);
+                var uid = doc.RootElement.GetProperty("result").GetProperty("uid").GetString();
+                var playbackUrl = $"https://videodelivery.net/{uid}/manifest/video.m3u8";
+                var mp4Url = $"https://videodelivery.net/{uid}/downloads/default.mp4";
+
+                videoHistory.CloudflareStreamId = uid;
+                videoHistory.URL = playbackUrl;
+                videoHistory.PlaybackUrl = playbackUrl;
+                videoHistory.MP4Url = mp4Url;
+
+                double? duration = null;
+                for (int i = 0; i < 3; i++)
+                {
+                    await Task.Delay(3000);
+                    var detailsUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/{uid}";
+                    var detailsResponse = await httpClient.GetAsync(detailsUrl);
+                    if (detailsResponse.IsSuccessStatusCode)
+                    {
+                        var detailsJson = await detailsResponse.Content.ReadAsStringAsync();
+                        using var detailsDoc = JsonDocument.Parse(detailsJson);
+
+                        if (detailsDoc.RootElement.TryGetProperty("result", out var resultElement) &&
+                            resultElement.TryGetProperty("duration", out var durationElement))
+                        {
+                            duration = durationElement.GetDouble();
+                            if (duration > 0)
+                            {
+                                videoHistory.Duration = duration;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return await _videoRepo.AddVideoAsync(videoHistory);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading video to Cloudflare.");
+                return false;
+            }
         }
     }
 }

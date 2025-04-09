@@ -82,6 +82,23 @@ namespace Services
         {
             return await _scheduleRepository.GetSchedulesByDateAsync(date);
         }
+        public async Task<Schedule> CreateReplayScheduleFromVideoAsync(int videoHistoryId, DateTime start, DateTime end)
+        {
+            var program = await _scheduleRepository.GetProgramByVideoHistoryIdAsync(videoHistoryId);
+            if (program == null)
+                throw new Exception("Program not found for this video.");
+
+            var schedule = new Schedule
+            {
+                ProgramID = program.ProgramID,
+                StartTime = start,
+                EndTime = end,
+                Status = "Ready",
+                IsReplay = true
+            };
+
+            return await _scheduleRepository.CreateScheduleAsync(schedule);
+        }
     }
 
 }

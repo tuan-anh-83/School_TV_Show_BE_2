@@ -51,5 +51,10 @@ namespace Repos
         {
             return await ProgramDAO.Instance.CountProgramsByScheduleAsync(scheduleId);
         }
+
+        public async Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId)
+        {
+            return await ProgramDAO.Instance.GetProgramsByChannelIdAsync((int)channelId);   
+        }
     }
 }

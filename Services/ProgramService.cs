@@ -17,10 +17,18 @@ namespace Services
             _programRepository = programRepository;
         }
 
+        public async Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId)
+        {
+            return await _programRepository.GetProgramsByChannelIdAsync(channelId);
+        }
+
         public async Task<Program> CreateProgramAsync(Program program)
         {
-            if (program == null || string.IsNullOrWhiteSpace(program.ProgramName))
-                throw new Exception("Program must have a valid name.");
+            if (program == null)
+                throw new ArgumentNullException(nameof(program));
+
+            if (string.IsNullOrWhiteSpace(program.ProgramName))
+                throw new ArgumentException("Program name is required.");
 
             return await _programRepository.CreateProgramAsync(program);
         }
@@ -28,28 +36,23 @@ namespace Services
         public async Task<Program?> GetProgramByIdAsync(int programId)
         {
             if (programId <= 0)
-                throw new Exception("Invalid Program ID.");
+                throw new ArgumentException("Invalid Program ID.");
 
-            var program = await _programRepository.GetProgramByIdAsync(programId);
-            if (program == null)
-                throw new Exception("Program not found.");
-
-            return program;
+            return await _programRepository.GetProgramByIdAsync(programId);
         }
 
         public async Task<IEnumerable<Program>> GetAllProgramsAsync()
         {
-            var programs = await _programRepository.GetAllProgramsAsync();
-            if (!programs.Any())
-                throw new Exception("No programs found.");
-
-            return programs;
+            return await _programRepository.GetAllProgramsAsync();
         }
 
         public async Task<bool> UpdateProgramAsync(Program program)
         {
-            if (program == null || program.ProgramID <= 0)
-                throw new Exception("Invalid Program.");
+            if (program == null)
+                throw new ArgumentNullException(nameof(program));
+
+            if (program.ProgramID <= 0)
+                throw new ArgumentException("Invalid Program ID.");
 
             return await _programRepository.UpdateProgramAsync(program);
         }
@@ -57,7 +60,7 @@ namespace Services
         public async Task<bool> DeleteProgramAsync(int programId)
         {
             if (programId <= 0)
-                throw new Exception("Invalid Program ID.");
+                throw new ArgumentException("Invalid Program ID.");
 
             return await _programRepository.DeleteProgramAsync(programId);
         }
@@ -65,13 +68,9 @@ namespace Services
         public async Task<IEnumerable<Program>> SearchProgramsByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
-                throw new Exception("Program name cannot be null or empty.");
+                throw new ArgumentException("Search name cannot be empty.");
 
-            var programs = await _programRepository.SearchProgramsByNameAsync(name);
-            if (!programs.Any())
-                throw new Exception($"No programs found with name: {name}.");
-
-            return programs;
+            return await _programRepository.SearchProgramsByNameAsync(name);
         }
 
         public async Task<int> CountProgramsAsync()
@@ -82,7 +81,7 @@ namespace Services
         public async Task<int> CountProgramsByStatusAsync(string status)
         {
             if (string.IsNullOrWhiteSpace(status))
-                throw new Exception("Status cannot be null or empty.");
+                throw new ArgumentException("Status cannot be null or empty.");
 
             return await _programRepository.CountProgramsByStatusAsync(status);
         }
@@ -90,7 +89,7 @@ namespace Services
         public async Task<int> CountProgramsByScheduleAsync(int scheduleId)
         {
             if (scheduleId <= 0)
-                throw new Exception("Invalid Schedule ID.");
+                throw new ArgumentException("Invalid Schedule ID.");
 
             return await _programRepository.CountProgramsByScheduleAsync(scheduleId);
         }

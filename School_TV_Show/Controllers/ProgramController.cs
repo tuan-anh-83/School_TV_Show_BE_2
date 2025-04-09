@@ -20,7 +20,6 @@ namespace School_TV_Show.Controllers
             _programService = programService;
             _schoolChannelService = schoolChannelService;
         }
-
         [HttpGet("all")]
         public async Task<IActionResult> GetAllPrograms()
         {
@@ -156,6 +155,45 @@ namespace School_TV_Show.Controllers
             };
 
             return Ok(new ApiResponse(true, "Program found", response));
+        }
+        [HttpGet("by-channel/{channelId}")]
+        [Authorize(Roles = "User,SchoolOwner,Admin")]
+        public async Task<IActionResult> GetProgramsByChannel(int channelId)
+        {
+            var programs = await _programService.GetProgramsByChannelIdAsync(channelId);
+
+            var result = programs.Select(p => new ProgramResponse
+            {
+                ProgramID = p.ProgramID,
+                ProgramName = p.ProgramName,
+                Title = p.Title,
+                Link = p.Link,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                SchoolChannelID = p.SchoolChannelID,
+                SchoolChannel = p.SchoolChannel == null ? null : new SchoolChannelResponse
+                {
+                    SchoolChannelID = p.SchoolChannel.SchoolChannelID,
+                    Name = p.SchoolChannel.Name,
+                    Description = p.SchoolChannel.Description,
+                    Website = p.SchoolChannel.Website,
+                    Email = p.SchoolChannel.Email,
+                    Address = p.SchoolChannel.Address
+                },
+                Schedules = p.Schedules?.Select(s => new ScheduleResponse
+                {
+                    ScheduleID = s.ScheduleID,
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Status = s.Status,
+                    LiveStreamStarted = s.LiveStreamStarted,
+                    LiveStreamEnded = s.LiveStreamEnded,
+                    ProgramID = s.ProgramID
+                }).ToList()
+            });
+
+            return Ok(new ApiResponse(true, "Programs by channel", result));
         }
     }
 }

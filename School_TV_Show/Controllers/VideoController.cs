@@ -38,7 +38,7 @@ namespace School_TV_Show.Controllers
         }
 
         [HttpGet("active")]
-        [Authorize(Roles = "User,SchoolOwner")]
+        [Authorize(Roles = "User,SchoolOwner,Admin")]
         public async Task<IActionResult> GetAllActiveVideos()
         {
             var videos = await _videoService.GetAllVideosAsync();
@@ -59,7 +59,7 @@ namespace School_TV_Show.Controllers
 
         [HttpPost("UploadCloudflare")]
         [Authorize(Roles = "SchoolOwner")]
-        public async Task<IActionResult> AddVideoHistoryWithCloudflare([FromForm] UploadVideoHistoryRequest request)
+        public async Task<IActionResult> UploadVideoToCloudflare([FromForm] UploadVideoHistoryRequest request)
         {
             if (request.VideoFile == null || request.VideoFile.Length == 0)
                 return BadRequest(new { message = "No video file provided." });
@@ -82,22 +82,18 @@ namespace School_TV_Show.Controllers
 
             return Ok(new
             {
-                message = "Video uploaded and saved successfully.",
+                message = "Video uploaded successfully.",
                 data = new
                 {
                     videoId = videoHistory.VideoHistoryID,
                     programId = videoHistory.ProgramID,
-                    type = videoHistory.Type,
-                    description = videoHistory.Description,
-                    streamAt = videoHistory.StreamAt,
                     playbackUrl = videoHistory.PlaybackUrl,
                     mp4Url = videoHistory.MP4Url,
-                    cloudflareStreamId = videoHistory.CloudflareStreamId,
-                    iframeUrl = $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{videoHistory.CloudflareStreamId}/iframe"
+                    iframeUrl = $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{videoHistory.CloudflareStreamId}/iframe",
+                    duration = videoHistory.Duration
                 }
             });
         }
-
 
         [HttpPut("{id}")]
         [Authorize(Roles = "SchoolOwner")]
@@ -177,6 +173,7 @@ namespace School_TV_Show.Controllers
                 v.URL,
                 v.PlaybackUrl,
                 v.MP4Url,
+                v.Duration,
                 CreatedAt = v.CreatedAt.ToString("HH:mm:ss"),
                 v.Program?.ProgramName,
                 v.ProgramID

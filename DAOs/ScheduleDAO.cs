@@ -148,6 +148,14 @@ namespace DAOs
                 .Where(s => s.StartTime.Date == date.Date)
                 .ToListAsync();
         }
+        public async Task<Program?> GetProgramByVideoHistoryIdAsync(int videoHistoryId)
+        {
+            var video = await _context.VideoHistories
+                .Include(v => v.Program)
+                .FirstOrDefaultAsync(v => v.VideoHistoryID == videoHistoryId);
+
+            return video?.Program;
+        }
 
     }
 }

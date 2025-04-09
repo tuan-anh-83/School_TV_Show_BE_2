@@ -31,101 +31,66 @@ namespace DAOs
             }
         }
 
-        public async Task<List<VideoHistory>> GetAllVideoHistoriesAsync()
-        {
-            return await _context.VideoHistories
-                .Include(v => v.Program)
-                    .ThenInclude(p => p.SchoolChannel)
-                .ToListAsync();
-        }
-
         public async Task<List<VideoHistory>> GetAllVideosAsync()
         {
             return await _context.VideoHistories
-                .Where(vh => vh.Status)
-                .Include(vh => vh.Program)
+                .Where(v => v.Status)
+                .Include(v => v.Program)
+                .ThenInclude(p => p.SchoolChannel)
+                .AsNoTracking()
                 .ToListAsync();
         }
 
-        public async Task<VideoHistory?> GetVideoByIdAsync(int videoHistoryId)
+        public async Task<VideoHistory?> GetVideoByIdAsync(int id)
         {
             return await _context.VideoHistories
-                .Include(vh => vh.Program)
-                .FirstOrDefaultAsync(vh => vh.VideoHistoryID == videoHistoryId && vh.Status);
+                .Include(v => v.Program)
+                .ThenInclude(p => p.SchoolChannel)
+                .FirstOrDefaultAsync(v => v.VideoHistoryID == id);
         }
 
         public async Task<VideoHistory?> GetLatestLiveStreamByProgramIdAsync(int programId)
         {
             return await _context.VideoHistories
-                .Where(vh => vh.ProgramID == programId && vh.Type == "Live" && vh.Status)
-                .OrderByDescending(vh => vh.CreatedAt)
+                .Where(v => v.ProgramID == programId && v.Type == "Live" && v.Status)
+                .OrderByDescending(v => v.CreatedAt)
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<bool> AddVideoAsync(VideoHistory videoHistory)
+        public async Task<bool> AddVideoAsync(VideoHistory video)
         {
-            try
-            {
-                videoHistory.CreatedAt = DateTime.UtcNow;
-                videoHistory.UpdatedAt = DateTime.UtcNow;
-                videoHistory.StreamAt = DateTime.UtcNow;
-                videoHistory.Status = true;
-
-                _context.VideoHistories.Add(videoHistory);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error adding video: {ex.Message}");
-                return false;
-            }
+            _context.VideoHistories.Add(video);
+            return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<bool> UpdateVideoAsync(VideoHistory videoHistory)
+        public async Task<bool> UpdateVideoAsync(VideoHistory video)
         {
-            var existingVideo = await GetVideoByIdAsync(videoHistory.VideoHistoryID);
-            if (existingVideo == null)
-                return false;
-
-            existingVideo.URL = videoHistory.URL;
-            existingVideo.Type = videoHistory.Type;
-            existingVideo.Description = videoHistory.Description;
-            existingVideo.ProgramID = videoHistory.ProgramID;
-            existingVideo.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                _context.VideoHistories.Update(existingVideo);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating video: {ex.Message}");
-                return false;
-            }
+            _context.VideoHistories.Update(video);
+            return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<bool> DeleteVideoAsync(int videoHistoryId)
+        public async Task<bool> DeleteVideoAsync(int id)
         {
-            var videoHistory = await GetVideoByIdAsync(videoHistoryId);
-            if (videoHistory == null)
-                return false;
+            var video = await _context.VideoHistories.FindAsync(id);
+            if (video == null) return false;
 
-            videoHistory.Status = false;
+            video.Status = false;
+            _context.VideoHistories.Update(video);
+            return await _context.SaveChangesAsync() > 0;
+        }
 
-            try
-            {
-                _context.VideoHistories.Update(videoHistory);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deleting video: {ex.Message}");
-                return false;
-            }
+        public async Task<List<VideoHistory>> GetAllVideoHistoriesAsync()
+        {
+            return await _context.VideoHistories
+                .Include(v => v.Program)
+                .ThenInclude(p => p.SchoolChannel)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<int> CountTotalVideosAsync()
+        {
+            return await _context.VideoHistories.CountAsync();
         }
 
         public async Task<int> CountByStatusAsync(bool status)
@@ -133,29 +98,41 @@ namespace DAOs
             return await _context.VideoHistories.CountAsync(v => v.Status == status);
         }
 
-        public async Task<(int totalViews, int totalLikes)> GetTotalViewsAndLikesAsync()
+        public async Task<(int, int)> GetTotalViewsAndLikesAsync()
         {
-            int totalViews = await _context.VideoHistories.SumAsync(v => v.VideoViews.Count);
-            int totalLikes = await _context.VideoHistories.SumAsync(v => v.VideoLikes.Count);
-            return (totalViews, totalLikes);
+            int views = await _context.VideoViews.CountAsync();
+            int likes = await _context.VideoLikes.CountAsync();
+            return (views, likes);
         }
 
-        public async Task<int> CountByDateRangeAsync(DateTime startDate, DateTime endDate)
-        {
-            return await _context.VideoHistories.CountAsync(v => v.CreatedAt >= startDate && v.CreatedAt <= endDate);
-        }
-
-        public async Task<int> CountTotalVideosAsync()
-        {
-            return await _context.VideoHistories.CountAsync();
-        }
-        public async Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date)
+        public async Task<int> CountByDateRangeAsync(DateTime start, DateTime end)
         {
             return await _context.VideoHistories
-                .Where(v => v.Status == true && v.CreatedAt.Date == date.Date)
-                .OrderBy(v => v.CreatedAt)
+                .CountAsync(v => v.CreatedAt >= start && v.CreatedAt <= end);
+        }
+
+        public async Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date)
+        {
+            var start = date.Date;
+            var end = start.AddDays(1);
+            return await _context.VideoHistories
                 .Include(v => v.Program)
+                .Where(v => v.CreatedAt >= start && v.CreatedAt < end)
                 .ToListAsync();
+        }
+
+        public async Task<VideoHistory?> GetReplayVideoByProgramAndTimeAsync(int programId, DateTime start, DateTime end)
+        {
+            return await _context.VideoHistories
+                .Where(v => v.ProgramID == programId && v.Status == true && v.Type != "Live"
+                        && v.CreatedAt >= start && v.CreatedAt <= end)
+                .OrderByDescending(v => v.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<VideoHistory?> GetReplayVideoAsync(int programId, DateTime start, DateTime end)
+        {
+            return await GetReplayVideoByProgramAndTimeAsync(programId, start, end);
         }
     }
 }

@@ -168,7 +168,15 @@ namespace School_TV_Show.Controllers
             if (!otpSaved)
                 return StatusCode(500, "Failed to generate OTP.");
 
-            await _emailService.SendOtpEmailAsync(request.Email, otpCode);
+            try
+            {
+                await _emailService.SendOtpEmailAsync(request.Email, otpCode);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send OTP email to {Email}", request.Email);
+                return StatusCode(500, "Failed to send OTP email.");
+            }
 
             return Ok(new
             {
@@ -188,6 +196,7 @@ namespace School_TV_Show.Controllers
             }
             if (request.Password != request.ConfirmPassword)
                 return BadRequest(new { error = "Password and Confirm Password do not match." });
+
             var account = new Account
             {
                 Username = request.Username,
@@ -205,13 +214,23 @@ namespace School_TV_Show.Controllers
             bool result = await _accountService.SignUpAsync(account);
             if (!result)
                 return Conflict("Username or Email already exists.");
+
             var otpCode = new Random().Next(100000, 999999).ToString();
             var expiration = DateTime.UtcNow.AddMinutes(5);
 
             bool otpSaved = await _accountService.SaveOtpAsync(request.Email, otpCode, expiration);
             if (!otpSaved)
                 return StatusCode(500, "Failed to generate OTP.");
-            await _emailService.SendOtpEmailAsync(request.Email, otpCode);
+
+            try
+            {
+                await _emailService.SendOtpEmailAsync(request.Email, otpCode);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send OTP email to {Email}", request.Email);
+                return StatusCode(500, "Failed to send OTP email.");
+            }
 
             return Ok(new
             {
@@ -289,26 +308,40 @@ namespace School_TV_Show.Controllers
                                               .ToList();
                 return BadRequest(new { errors });
             }
+
             var account = await _accountService.GetAccountByEmailAsync(request.Email);
             if (account == null)
                 return NotFound("Account not found.");
+
             if (!account.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
                 return Ok(new { message = "Account is already verified." });
+
             var currentOtp = await _accountService.GetCurrentOtpAsync(request.Email);
             if (currentOtp != null && currentOtp.Expiration > DateTime.UtcNow)
             {
                 return Ok(new { message = "Your OTP is still active. Please use the existing OTP." });
             }
+
             var otpCode = new Random().Next(100000, 999999).ToString();
             var expiration = DateTime.UtcNow.AddMinutes(5);
 
             bool otpSaved = await _accountService.SaveOtpAsync(request.Email, otpCode, expiration);
             if (!otpSaved)
                 return StatusCode(500, "Failed to generate OTP.");
-            await _emailService.SendOtpEmailAsync(request.Email, otpCode);
+
+            try
+            {
+                await _emailService.SendOtpEmailAsync(request.Email, otpCode);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to resend OTP email to {Email}", request.Email);
+                return StatusCode(500, "Failed to resend OTP email.");
+            }
 
             return Ok(new { message = "A new OTP has been sent to your email." });
         }
+
         #endregion
 
         #region Login & External Authentication

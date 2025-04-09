@@ -20,5 +20,6 @@ namespace Repos
         Task<Dictionary<string, List<Schedule>>> GetSchedulesGroupedTimelineAsync();
         Task<IEnumerable<Schedule>> GetSchedulesByChannelAndDateAsync(int channelId, DateTime date);
         Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date);
+        Task<Program?> GetProgramByVideoHistoryIdAsync(int videoHistoryId);
     }
 }

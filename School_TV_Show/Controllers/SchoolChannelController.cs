@@ -63,7 +63,7 @@ namespace School_TV_Show.Controllers
         }
 
         // GET: api/schoolchannels/{id}
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "SchoolOwner,Admin")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSchoolChannelById(int id)
         {

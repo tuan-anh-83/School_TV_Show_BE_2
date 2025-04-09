@@ -62,5 +62,9 @@ namespace Repos
         {
             return await ScheduleDAO.Instance.GetSchedulesByChannelAndDateAsync(channelId, date);
         }
+        public async Task<Program?> GetProgramByVideoHistoryIdAsync(int videoHistoryId)
+        {
+            return await ScheduleDAO.Instance.GetProgramByVideoHistoryIdAsync((int)videoHistoryId);
+        }
     }
 }

@@ -6,14 +6,15 @@ namespace Repos
 {
     public interface IProgramRepo
     {
-        Task<IEnumerable<Program>> GetAllProgramsAsync();
-        Task<Program?> GetProgramByIdAsync(int programId);
-        Task<IEnumerable<Program>> SearchProgramsByNameAsync(string name);
         Task<Program> CreateProgramAsync(Program program);
+        Task<Program?> GetProgramByIdAsync(int programId);
+        Task<IEnumerable<Program>> GetAllProgramsAsync();
         Task<bool> UpdateProgramAsync(Program program);
         Task<bool> DeleteProgramAsync(int programId);
+        Task<IEnumerable<Program>> SearchProgramsByNameAsync(string name);
         Task<int> CountProgramsAsync();
         Task<int> CountProgramsByStatusAsync(string status);
         Task<int> CountProgramsByScheduleAsync(int scheduleId);
+        Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId);
     }
 }
