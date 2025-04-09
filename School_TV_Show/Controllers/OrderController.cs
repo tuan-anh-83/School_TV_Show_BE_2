@@ -48,6 +48,7 @@ namespace School_TV_Show.Controllers
                 }
 
                 var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var usernameClaim = User.FindFirst(ClaimTypes.Name)?.Value;
                 if (!int.TryParse(accountIdClaim, out int accountId))
                 {
                     return Unauthorized("Invalid account information.");
@@ -85,6 +86,8 @@ namespace School_TV_Show.Controllers
 
                 long uniquePaymentId = createdOrder.OrderCode; // Use OrderCode
 
+                string description = $"Payment by {usernameClaim} for package '{package.Name}'";
+
                 List<ItemData> items = new()
         {
             new ItemData(package.Name, orderDetail.Quantity, (int)(package.Price))
@@ -93,7 +96,7 @@ namespace School_TV_Show.Controllers
                 PaymentData paymentData = new PaymentData(
                     uniquePaymentId,
                     (int)(orderDetail.Price),
-                    "Order Payment",
+                    description,
                     items,
                     cancelUrl,
                     returnUrl
