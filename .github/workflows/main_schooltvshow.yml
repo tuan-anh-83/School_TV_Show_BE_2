@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - schooltv2
+name: Build and deploy ASP.Net Core app to Azure Web App - schooltvshow
 
 on:
   push:
@@ -54,15 +54,15 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_9BF8DDC4EBA8483F9EA501003CA8832E }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4664AAF26AB148FAB4F04292180A543B }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8EFE1DE2A75A48E2AC533C179E10A9C4 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D4894EAAEEAA43639840431C0C20A587 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_52CBAA9D83584E85BC35D4D2A673AEE7 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_00822FB76B2D44979558A5AA922BAF92 }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'schooltv2'
+          app-name: 'schooltvshow'
           slot-name: 'Production'
           package: .
           
