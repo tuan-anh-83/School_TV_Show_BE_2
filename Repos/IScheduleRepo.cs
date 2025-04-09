@@ -21,5 +21,6 @@ namespace Repos
         Task<IEnumerable<Schedule>> GetSchedulesByChannelAndDateAsync(int channelId, DateTime date);
         Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date);
         Task<Program?> GetProgramByVideoHistoryIdAsync(int videoHistoryId);
+        Task<List<Schedule>> GetSchedulesByProgramIdAsync(int programId);
     }
 }

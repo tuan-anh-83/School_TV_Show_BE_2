@@ -21,5 +21,6 @@ namespace Services
         Task<IEnumerable<Schedule>> GetUpcomingSchedulesAsync();
         Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date);
         Task<Schedule> CreateReplayScheduleFromVideoAsync(int videoHistoryId, DateTime start, DateTime end);
+        Task<List<Schedule>> GetSchedulesByProgramIdAsync(int programId);
     }
 }

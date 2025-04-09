@@ -99,6 +99,10 @@ namespace Services
 
             return await _scheduleRepository.CreateScheduleAsync(schedule);
         }
+        public async Task<List<Schedule>> GetSchedulesByProgramIdAsync(int programId)
+        {
+            return await _scheduleRepository.GetSchedulesByProgramIdAsync(programId);
+        }
     }
 
 }

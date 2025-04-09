@@ -14,7 +14,6 @@ namespace BOs.Models
         public string? CloudflareStreamId { get; set; }
         public string ProgramName { get; set; }
         public string Title { get; set; }
-        public string Link { get; set; }
         public string Status { get; set; }
 
         public virtual SchoolChannel SchoolChannel { get; set; }
@@ -25,6 +24,5 @@ namespace BOs.Models
         public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
         public ICollection<VideoHistory> VideoHistories { get; set; }
         public ICollection<ProgramFollow> ProgramFollows { get; set; }
-
     }
 }

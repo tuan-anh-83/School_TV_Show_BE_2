@@ -150,5 +150,18 @@ namespace DAOs
                 .Where(p => p.Schedules.Any(s => s.ScheduleID == scheduleId))
                 .CountAsync();
         }
+        public async Task<List<Program>> GetProgramsWithVideoHistoryAsync()
+        {
+            return await _context.Programs
+                .Where(p => p.VideoHistories.Any())
+                .ToListAsync();
+        }
+
+        public async Task<List<Program>> GetProgramsWithoutVideoHistoryAsync()
+        {
+            return await _context.Programs
+                .Where(p => !p.VideoHistories.Any())
+                .ToListAsync();
+        }
     }
 }

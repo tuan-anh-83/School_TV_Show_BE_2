@@ -30,6 +30,15 @@ namespace DAOs
                 return instance;
             }
         }
+
+        public async Task<List<Schedule>> GetSchedulesByProgramIdAsync(int programId)
+        {
+            return await _context.Schedules
+                .Where(s => s.ProgramID == programId)
+                .ToListAsync();
+        }
+
+
         public async Task<Schedule> CreateScheduleAsync(Schedule schedule)
         {
             if (schedule.StartTime >= schedule.EndTime)
@@ -103,6 +112,7 @@ namespace DAOs
             return await _context.Schedules
                 .Where(s => s.Status == "Live")
                 .Include(s => s.Program)
+                    .ThenInclude(p => p.SchoolChannel)
                 .ToListAsync();
         }
 

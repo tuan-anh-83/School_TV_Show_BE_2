@@ -13,9 +13,10 @@ namespace BOs.Models
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public string Status { get; set; } = "Pending";
-        public bool LiveStreamStarted { get; set; } = false;
-        public bool LiveStreamEnded { get; set; } = false;
-        public bool IsReplay { get; set; } = false;
-        public virtual Program Program { get; set; }
+        public bool LiveStreamStarted { get; set; }
+        public bool LiveStreamEnded { get; set; }
+        public bool IsReplay { get; set; }
+        public int? VideoHistoryID { get; set; }
+        public Program Program { get; set; }
     }
 }

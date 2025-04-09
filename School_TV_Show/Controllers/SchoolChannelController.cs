@@ -142,49 +142,43 @@ namespace School_TV_Show.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateSchoolChannel(int id, [FromBody] UpdateSchoolChannelRequestDTO request)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                                              .ToList();
-                return BadRequest(new { errors });
-            }
-            if (!string.IsNullOrWhiteSpace(request.Email) && !IsValidEmail(request.Email))
-                return BadRequest("Invalid email format.");
-            if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Description))
-                return BadRequest("Name and Description are required.");
-
             var accountId = GetAuthenticatedUserId();
             if (accountId == null)
                 return Unauthorized("User is not authenticated.");
 
             var schoolChannel = await _service.GetByIdAsync(id);
             if (schoolChannel == null)
-            {
                 return NotFound("School channel not found");
-            }
 
             if (schoolChannel.AccountID != accountId)
-            {
                 return Forbid("You do not have permission to update this school channel.");
-            }
 
             var account = schoolChannel.Account;
             if (account == null || !account.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
-            {
                 return Forbid("Your account is not active.");
-            }
 
             if (!schoolChannel.Status)
-            {
                 return BadRequest("This school channel is not active and cannot be updated.");
-            }
 
-            schoolChannel.Name = request.Name;
-            schoolChannel.Description = request.Description;
-            schoolChannel.Website = request.Website;
-            schoolChannel.Email = request.Email;
-            schoolChannel.Address = request.Address;
+            if (!string.IsNullOrWhiteSpace(request.Name))
+                schoolChannel.Name = request.Name;
+
+            if (!string.IsNullOrWhiteSpace(request.Description))
+                schoolChannel.Description = request.Description;
+
+            if (!string.IsNullOrWhiteSpace(request.Address))
+                schoolChannel.Address = request.Address;
+
+            if (!string.IsNullOrWhiteSpace(request.Website))
+                schoolChannel.Website = request.Website;
+
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                if (!IsValidEmail(request.Email))
+                    return BadRequest("Invalid email format.");
+
+                schoolChannel.Email = request.Email;
+            }
             schoolChannel.UpdatedAt = DateTime.UtcNow;
 
             try

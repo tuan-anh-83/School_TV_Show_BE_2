@@ -16,7 +16,9 @@ namespace Services.HostedServices
         private readonly ILogger<PendingAccountReminderService> _logger;
         private readonly TimeSpan _reminderInterval = TimeSpan.FromHours(1);
 
-        public PendingAccountReminderService(IServiceProvider serviceProvider, ILogger<PendingAccountReminderService> logger)
+        public PendingAccountReminderService(
+            IServiceProvider serviceProvider,
+            ILogger<PendingAccountReminderService> logger)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
@@ -24,36 +26,48 @@ namespace Services.HostedServices
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            _logger.LogInformation("PendingAccountReminderService started.");
+
             while (!stoppingToken.IsCancellationRequested)
             {
-                await SendPendingAccountRemindersAsync();
+                try
+                {
+                    await SendPendingAccountRemindersAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unhandled error in background reminder task.");
+                }
+
                 await Task.Delay(_reminderInterval, stoppingToken);
             }
+
+            _logger.LogInformation("PendingAccountReminderService stopped.");
         }
 
         private async Task SendPendingAccountRemindersAsync()
         {
-            using (var scope = _serviceProvider.CreateScope())
+            using var scope = _serviceProvider.CreateScope();
+            var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
+            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+            DateTime threshold = DateTime.UtcNow.AddHours(-1);
+
+            try
             {
-                var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
-                var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                var pendingAccounts = await accountService.GetPendingAccountsAsync(threshold);
 
-                try
+                foreach (var account in pendingAccounts)
                 {
-                    DateTime threshold = DateTime.UtcNow.AddHours(-1);
-                    var pendingAccounts = await accountService.GetPendingAccountsAsync(threshold);
-
-                    foreach (var account in pendingAccounts)
-                    {
-                        await emailService.SendOtpReminderEmailAsync(account.Email);
-                    }
-
-                    _logger.LogInformation("Reminder emails sent for pending accounts.");
+                    await emailService.SendOtpReminderEmailAsync(account.Email);
+                    _logger.LogInformation("Sent OTP reminder to: {Email}", account.Email);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error while sending reminder emails for pending accounts.");
-                }
+
+                _logger.LogInformation("Reminder process completed. Total reminders sent: {Count}", pendingAccounts.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while sending OTP reminders.");
             }
         }
     }

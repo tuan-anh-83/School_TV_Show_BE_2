@@ -21,6 +21,7 @@ namespace School_TV_Show.Controllers
             _videoHistoryService = videoHistoryService;
             _cloudflareSettings = cloudflareSettings;
         }
+
         [HttpPost]
         public async Task<IActionResult> CreateSchedule([FromBody] CreateScheduleRequest request)
         {
@@ -56,13 +57,14 @@ namespace School_TV_Show.Controllers
                 StartTime = request.StartTime,
                 EndTime = request.EndTime,
                 Status = "Ready",
-                IsReplay = true
+                IsReplay = true,
+                VideoHistoryID = video.VideoHistoryID
             };
 
             var created = await _scheduleService.CreateScheduleAsync(schedule);
 
             var iframeUrl = string.IsNullOrEmpty(video.CloudflareStreamId)
-            ? null
+                ? null
                 : $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{video.CloudflareStreamId}/iframe";
 
             return Ok(new ApiResponse(true, "Replay schedule created", new
@@ -77,6 +79,49 @@ namespace School_TV_Show.Controllers
                 program = video.Program?.ProgramName ?? "No program",
                 channel = video.Program?.SchoolChannel?.Name ?? "No channel"
             }));
+        }
+
+        [HttpGet("live-now")]
+        public async Task<IActionResult> GetLiveNowSchedules()
+        {
+            var schedules = await _scheduleService.GetLiveNowSchedulesAsync();
+            return Ok(schedules.Select(s => new
+            {
+                s.ScheduleID,
+                s.StartTime,
+                s.EndTime,
+                s.Status,
+                s.IsReplay,
+                Program = new
+                {
+                    s.Program.ProgramID,
+                    s.Program.Title,
+                    SchoolChannel = new
+                    {
+                        s.Program.SchoolChannel.SchoolChannelID,
+                        s.Program.SchoolChannel.Name
+                    }
+                }
+            }));
+        }
+
+
+        [HttpGet("by-program/{programId}")]
+        [Authorize(Roles = "Admin,SchoolOwner,User")]
+        public async Task<IActionResult> GetSchedulesByProgramId(int programId)
+        {
+            var schedules = await _scheduleService.GetSchedulesByProgramIdAsync(programId);
+
+            var result = schedules.Select(s => new
+            {
+                s.ScheduleID,
+                s.StartTime,
+                s.EndTime,
+                s.LiveStreamStarted,
+                s.LiveStreamEnded
+            });
+
+            return Ok(new ApiResponse(true, "Schedules for program", result));
         }
 
         [HttpGet("{id}")]
@@ -128,7 +173,6 @@ namespace School_TV_Show.Controllers
         }
 
         [HttpGet("by-channel-and-date")]
-        [Authorize(Roles = "User,SchoolOwner,Admin")]
         public async Task<IActionResult> GetSchedulesByChannelAndDate([FromQuery] int channelId, [FromQuery] DateTime date)
         {
             if (channelId <= 0)
@@ -136,6 +180,7 @@ namespace School_TV_Show.Controllers
 
             var schedules = await _scheduleService.GetSchedulesByChannelAndDateAsync(channelId, date);
             var result = new List<object>();
+
             foreach (var schedule in schedules)
             {
                 string? iframeUrl = null;
@@ -147,7 +192,17 @@ namespace School_TV_Show.Controllers
 
                 if (schedule.IsReplay)
                 {
-                    var video = await _videoHistoryService.GetReplayVideoByProgramAndTimeAsync(schedule.ProgramID, schedule.StartTime, schedule.EndTime);
+                    VideoHistory? video = null;
+                    if (schedule.VideoHistoryID.HasValue)
+                    {
+                        video = await _videoHistoryService.GetVideoByIdAsync(schedule.VideoHistoryID.Value);
+                    }
+                    else
+                    {
+                        video = await _videoHistoryService.GetReplayVideoByProgramAndTimeAsync(
+                            schedule.ProgramID, schedule.StartTime, schedule.EndTime);
+                    }
+
                     if (video != null)
                     {
                         iframeUrl = string.IsNullOrEmpty(video.CloudflareStreamId)
@@ -178,12 +233,16 @@ namespace School_TV_Show.Controllers
                     schedule.LiveStreamStarted,
                     schedule.LiveStreamEnded,
                     schedule.ProgramID,
+
+                    videoHistoryIdFromSchedule = schedule.VideoHistoryID,
+                    videoHistoryId,
+
                     iframeUrl,
                     playbackUrl,
                     mp4Url,
                     duration,
                     description,
-                    videoHistoryId,
+
                     program = new
                     {
                         schedule.Program?.ProgramID,
@@ -192,7 +251,9 @@ namespace School_TV_Show.Controllers
                         channel = schedule.Program?.SchoolChannel?.Name
                     }
                 });
+
             }
+
             return Ok(new ApiResponse(true, "Schedules for channel and date", result));
         }
 

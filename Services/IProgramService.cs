@@ -19,5 +19,7 @@ namespace Services
         Task<int> CountProgramsByStatusAsync(string status);
         Task<int> CountProgramsByScheduleAsync(int scheduleId);
         Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId);
+        Task<List<Program>> GetProgramsWithVideosAsync();
+        Task<List<Program>> GetProgramsWithoutVideosAsync();
     }
 }

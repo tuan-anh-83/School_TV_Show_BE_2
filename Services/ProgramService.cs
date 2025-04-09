@@ -93,5 +93,14 @@ namespace Services
 
             return await _programRepository.CountProgramsByScheduleAsync(scheduleId);
         }
+        public async Task<List<Program>> GetProgramsWithVideosAsync()
+        {
+            return await _programRepository.GetProgramsWithVideosAsync();
+        }
+
+        public async Task<List<Program>> GetProgramsWithoutVideosAsync()
+        {
+            return await _programRepository.GetProgramsWithoutVideosAsync();
+        }
     }
 }

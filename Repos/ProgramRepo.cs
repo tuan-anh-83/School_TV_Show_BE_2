@@ -56,5 +56,13 @@ namespace Repos
         {
             return await ProgramDAO.Instance.GetProgramsByChannelIdAsync((int)channelId);   
         }
+        public async Task<List<Program>> GetProgramsWithVideosAsync()
+        {
+            return await ProgramDAO.Instance.GetProgramsWithVideoHistoryAsync();
+        }
+        public async Task<List<Program>> GetProgramsWithoutVideosAsync()
+        {
+            return await ProgramDAO.Instance.GetProgramsWithVideoHistoryAsync();
+        }
     }
 }

@@ -20,6 +20,20 @@ namespace School_TV_Show.Controllers
             _programService = programService;
             _schoolChannelService = schoolChannelService;
         }
+        [HttpGet("with-videos")]
+        public async Task<IActionResult> GetProgramsWithVideos()
+        {
+            var programs = await _programService.GetProgramsWithVideosAsync();
+            return Ok(programs.Select(p => new { p.ProgramID, p.Title }));
+        }
+
+        [HttpGet("without-videos")]
+        public async Task<IActionResult> GetProgramsWithoutVideos()
+        {
+            var programs = await _programService.GetProgramsWithoutVideosAsync();
+            return Ok(programs.Select(p => new { p.ProgramID, p.Title }));
+        }
+
         [HttpGet("all")]
         public async Task<IActionResult> GetAllPrograms()
         {
@@ -30,7 +44,6 @@ namespace School_TV_Show.Controllers
                 ProgramID = p.ProgramID,
                 ProgramName = p.ProgramName,
                 Title = p.Title,
-                Link = p.Link,
                 Status = p.Status,
                 CreatedAt = p.CreatedAt,
                 UpdatedAt = p.UpdatedAt,
@@ -69,7 +82,6 @@ namespace School_TV_Show.Controllers
             {
                 ProgramName = request.ProgramName,
                 Title = request.Title,
-                Link = request.Link,
                 Status = "Active",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -92,7 +104,6 @@ namespace School_TV_Show.Controllers
 
             program.ProgramName = request.ProgramName;
             program.Title = request.Title;
-            program.Link = request.Link;
             program.UpdatedAt = DateTime.UtcNow;
 
             var success = await _programService.UpdateProgramAsync(program);
@@ -128,7 +139,6 @@ namespace School_TV_Show.Controllers
                 ProgramID = p.ProgramID,
                 ProgramName = p.ProgramName,
                 Title = p.Title,
-                Link = p.Link,
                 Status = p.Status,
                 CreatedAt = p.CreatedAt,
                 UpdatedAt = p.UpdatedAt,
@@ -167,7 +177,6 @@ namespace School_TV_Show.Controllers
                 ProgramID = p.ProgramID,
                 ProgramName = p.ProgramName,
                 Title = p.Title,
-                Link = p.Link,
                 Status = p.Status,
                 CreatedAt = p.CreatedAt,
                 UpdatedAt = p.UpdatedAt,

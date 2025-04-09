@@ -224,7 +224,6 @@ namespace BOs.Data
                       .ValueGeneratedOnUpdate();
                 entity.Property(e => e.ProgramName).IsRequired().HasMaxLength(255);
                 entity.Property(e => e.Title).HasMaxLength(255);
-                entity.Property(e => e.Link).HasMaxLength(255);
                 entity.Property(e => e.Status).HasMaxLength(50);
                 entity.Property(e => e.CloudflareStreamId)
                       .HasMaxLength(100)

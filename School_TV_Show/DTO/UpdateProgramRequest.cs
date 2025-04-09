@@ -14,9 +14,5 @@ namespace School_TV_Show.DTO
         [Required(ErrorMessage = "Title is required.")]
         [StringLength(200, ErrorMessage = "Title cannot exceed 200 characters.")]
         public string Title { get; set; }
-
-        [Required(ErrorMessage = "Link is required.")]
-        [StringLength(500, ErrorMessage = "Link cannot exceed 500 characters.")]
-        public string Link { get; set; }
     }
 }
