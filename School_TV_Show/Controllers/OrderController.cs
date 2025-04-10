@@ -86,7 +86,7 @@ namespace School_TV_Show.Controllers
 
                 long uniquePaymentId = createdOrder.OrderCode; // Use OrderCode
 
-                string description = $"Payment by {usernameClaim} for package '{package.Name}'";
+                string description = $"{usernameClaim}-'{package.Name}'";
 
                 List<ItemData> items = new()
         {

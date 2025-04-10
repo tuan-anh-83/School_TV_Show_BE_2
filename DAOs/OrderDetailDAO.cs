@@ -41,6 +41,7 @@ namespace DAOs
         public async Task<IEnumerable<OrderDetail>> GetOrderDetailsByOrderIdAsync(int orderId)
         {
             return await _context.OrderDetails
+                .Include(od => od.Package)
                 .Where(od => od.OrderID == orderId)
                 .ToListAsync();
         }
