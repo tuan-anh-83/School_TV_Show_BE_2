@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using School_TV_Show.DTO;
-using Services;
 using Services.CloudFlareService;
+using Services.Interface;
 
 namespace School_TV_Show.Controllers
 {

@@ -1,7 +1,7 @@
 ﻿using BOs.Models;
 using Microsoft.AspNetCore.Mvc;
 using School_TV_Show.DTO;
-using Services;
+using Services.Interface;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

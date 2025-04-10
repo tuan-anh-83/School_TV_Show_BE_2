@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Identity.Client;
 using School_TV_Show.DTO;
-using Services;
+using Services.Interface;
 using System.Security.Claims;
 
 namespace School_TV_Show.Controllers

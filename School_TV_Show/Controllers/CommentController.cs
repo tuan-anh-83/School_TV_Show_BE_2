@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using School_TV_Show.DTO;
-using Services;
 using System.Security.Claims;
 using Services.Hubs;
+using Services.Interface;
 
 namespace School_TV_Show.Controllers
 {

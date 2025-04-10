@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Services.Email;
+using Services.Interface;
 using System;
 using System.Collections.Generic;
 using System.Linq;

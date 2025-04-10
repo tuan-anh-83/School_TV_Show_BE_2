@@ -1,7 +1,7 @@
 ﻿using BOs.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Services;
+using Services.Interface;
 using System.Security.Claims;
 
 namespace School_TV_Show.Controllers

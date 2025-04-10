@@ -7,11 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Services;
-using Repos;
 using Microsoft.AspNetCore.SignalR;
 using Services.Email;
 using Services.Hubs;
+using Services.Interface;
+using Repos.Interface;
 
 namespace Services.HostedServices
 {

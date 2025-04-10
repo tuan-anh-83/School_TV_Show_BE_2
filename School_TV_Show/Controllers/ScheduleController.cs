@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using School_TV_Show.DTO;
-using Services;
+using Services.Interface;
 
 namespace School_TV_Show.Controllers
 {

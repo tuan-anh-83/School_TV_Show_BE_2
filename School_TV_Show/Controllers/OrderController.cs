@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using Net.payOS.Types;
 using Net.payOS;
 using School_TV_Show.DTO;
-using Services;
 using System.Security.Claims;
 using System.Text.Json;
+using Services.Interface;
 
 namespace School_TV_Show.Controllers
 {

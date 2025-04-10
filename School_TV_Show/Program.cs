@@ -7,8 +7,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Net.payOS;
-using Repos;
-using Services;
 using Services.CloudFlareService;
 using Services.Email;
 using Services.HostedServices;
@@ -18,6 +16,10 @@ using Services.Token;
 using System.Security.Claims;
 using System.Text;
 using Services.Hubs;
+using Services.Interface;
+using Services.Implements;
+using Repos.Implements;
+using Repos.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 

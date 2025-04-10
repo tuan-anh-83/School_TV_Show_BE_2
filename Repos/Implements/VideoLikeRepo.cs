@@ -1,0 +1,56 @@
+﻿using BOs.Models;
+using DAOs;
+using Repos.Interface;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace Repos.Implements
+{
+    public class VideoLikeRepo : IVideoLikeRepo
+    {
+        public async Task<List<VideoLike>> GetAllVideoLikesAsync()
+        {
+            return await VideoLikeDAO.Instance.GetAllVideoLikesAsync();
+        }
+
+        public async Task<VideoLike?> GetVideoLikeByIdAsync(int videoLikeId)
+        {
+            return await VideoLikeDAO.Instance.GetVideoLikeByIdAsync(videoLikeId);
+        }
+
+        public async Task<bool> AddVideoLikeAsync(VideoLike videoLike)
+        {
+            return await VideoLikeDAO.Instance.AddVideoLikeAsync(videoLike);
+        }
+
+        public async Task<bool> UpdateVideoLikeAsync(VideoLike videoLike)
+        {
+            return await VideoLikeDAO.Instance.UpdateVideoLikeAsync(videoLike);
+        }
+
+        public async Task<bool> DeleteVideoLikeAsync(int videoLikeId)
+        {
+            return await VideoLikeDAO.Instance.DeleteVideoLikeAsync(videoLikeId);
+        }
+
+        public async Task<int> GetTotalLikesForVideoAsync(int videoHistoryId)
+        {
+            return await VideoLikeDAO.Instance.GetTotalLikesForVideoAsync(videoHistoryId);
+        }
+
+        public async Task<int> CountTotalLikesAsync()
+        {
+            return await VideoLikeDAO.Instance.CountTotalLikesAsync();
+        }
+
+        public async Task<int> CountLikesByVideoIdAsync(int videoHistoryId)
+        {
+            return await VideoLikeDAO.Instance.CountLikesByVideoIdAsync(videoHistoryId);
+        }
+
+        public async Task<Dictionary<int, int>> GetLikesCountPerVideoAsync()
+        {
+            return await VideoLikeDAO.Instance.GetLikesCountPerVideoAsync();
+        }
+    }
+}
