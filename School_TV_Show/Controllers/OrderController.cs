@@ -164,7 +164,7 @@ namespace School_TV_Show.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> GetOrderById(int id)
         {
             try
