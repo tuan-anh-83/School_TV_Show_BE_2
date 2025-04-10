@@ -578,7 +578,7 @@ namespace School_TV_Show.Controllers
 
         [HttpPost("forgot-password")]
         [AllowAnonymous]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
