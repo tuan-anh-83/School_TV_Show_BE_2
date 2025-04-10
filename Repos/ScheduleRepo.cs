@@ -70,5 +70,13 @@ namespace Repos
         {
             return await ScheduleDAO.Instance.GetSchedulesByProgramIdAsync((int)programId);
         }
+        public async Task<bool> IsScheduleOverlappingAsync(int schoolChannelId, DateTime startTime, DateTime endTime)
+        {
+            return await ScheduleDAO.Instance.IsScheduleOverlappingAsync(schoolChannelId, startTime, endTime);
+        }
+        public async Task<Program?> GetProgramByIdAsync(int programId)
+        {
+            return await ScheduleDAO.Instance.GetProgramByIdAsync((int)programId);
+        }
     }
 }

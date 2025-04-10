@@ -166,6 +166,19 @@ namespace DAOs
 
             return video?.Program;
         }
+        public async Task<Program?> GetProgramByIdAsync(int programId)
+        {
+            return await _context.Programs.FirstOrDefaultAsync(p => p.ProgramID == programId);
+        }
+
+        public async Task<bool> IsScheduleOverlappingAsync(int schoolChannelId, DateTime startTime, DateTime endTime)
+        {
+            return await _context.Schedules
+                .AnyAsync(s => s.Program.SchoolChannelID == schoolChannelId &&
+                               ((startTime >= s.StartTime && startTime < s.EndTime) ||
+                                (endTime > s.StartTime && endTime <= s.EndTime) ||
+                                (startTime <= s.StartTime && endTime >= s.EndTime)));
+        }
 
     }
 }

@@ -238,5 +238,16 @@ namespace DAL.DAO
             _context.Schedules.Update(schedule);
             await Task.CompletedTask;
         }
+        public async Task<List<VideoHistory>> GetExpiredUploadedVideosAsync(DateTime currentTime)
+        {
+            return await _context.VideoHistories
+                .Where(v =>
+                    v.Type != "Live" &&
+                    v.Status == true &&
+                    v.StreamAt.HasValue &&
+                    v.Duration.HasValue &&
+                    v.StreamAt.Value.AddMinutes(v.Duration.Value) <= currentTime)
+                .ToListAsync();
+        }
     }
 }

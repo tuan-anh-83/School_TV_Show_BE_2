@@ -28,7 +28,27 @@ namespace School_TV_Show.Controllers
             _cloudflareSettings = cloudflareOptions.Value;
         }
 
+        [HttpGet("program/{programId}/videos")]
+        [Authorize(Roles = "SchoolOwner,Admin")]
+        public async Task<IActionResult> GetVideosByProgramId(int programId)
+        {
+            var videos = await _videoService.GetVideosByProgramIdAsync(programId);
+            var result = videos.Select(v => new
+            {
+                v.VideoHistoryID,
+                v.Description,
+                v.Type,
+                v.URL,
+                v.PlaybackUrl,
+                v.MP4Url,
+                v.Duration,
+                v.CreatedAt,
+                v.Status,
+                v.ProgramID
+            });
 
+            return Ok(result);
+        }
         [HttpGet("all")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllVideos()

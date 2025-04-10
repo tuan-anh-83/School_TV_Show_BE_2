@@ -165,5 +165,9 @@ namespace Repos
         {
             return await _dao.GetVideoHistoryByProgramIdAsync(programId);
         }
+        public async Task<List<VideoHistory>> GetExpiredUploadedVideosAsync(DateTime currentTime)
+        {
+            return await _dao.GetExpiredUploadedVideosAsync(currentTime);
+        }
     }
 }

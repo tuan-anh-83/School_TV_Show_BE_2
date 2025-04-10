@@ -269,7 +269,25 @@ namespace Services
 
             return result?.Result?.Status?.State?.ToLower() == "live";
         }
+        public async Task<bool> CheckLiveInputExistsAsync(string streamId)
+        {
+            if (string.IsNullOrEmpty(streamId)) return false;
 
+            try
+            {
+                var url = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{streamId}";
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _cloudflareSettings.ApiToken);
+
+                var response = await client.GetAsync(url);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[CheckLiveInputExistsAsync] Error checking Cloudflare stream input existence for ID {StreamId}", streamId);
+                return false;
+            }
+        }
         public async Task<VideoHistory> GetLiveStreamByIdAsync(int id) => await _repository.GetLiveStreamByIdAsync(id);
         public async Task<IEnumerable<VideoHistory>> GetActiveLiveStreamsAsync() => await _repository.GetActiveLiveStreamsAsync();
         public async Task<bool> AddLikeAsync(VideoLike like) => await _repository.AddLikeAsync(like);

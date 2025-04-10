@@ -149,6 +149,11 @@ namespace Services
                 _logger.LogError(ex, "Error uploading video to Cloudflare.");
                 return false;
             }
+
+        }
+        public async Task<List<VideoHistory>> GetVideosByProgramIdAsync(int programId)
+        {
+            return await _videoRepo.GetVideosByProgramIdAsync(programId);
         }
     }
 }

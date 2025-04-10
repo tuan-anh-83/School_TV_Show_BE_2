@@ -11,17 +11,42 @@ namespace Services
     public class ScheduleService : IScheduleService
     {
         private readonly IScheduleRepo _scheduleRepository;
+        private readonly IProgramRepo _programRepository;
 
-        public ScheduleService(IScheduleRepo scheduleRepository)
+        public ScheduleService(IScheduleRepo scheduleRepo, IProgramRepo programRepo)
         {
-            _scheduleRepository = scheduleRepository;
+            _scheduleRepository = scheduleRepo;
+            _programRepository = programRepo;
         }
 
+        public async Task<bool> IsScheduleOverlappingAsync(int schoolChannelId, DateTime startTime, DateTime endTime)
+        {
+            return await _scheduleRepository.IsScheduleOverlappingAsync(schoolChannelId, startTime, endTime);
+        }
 
+        public async Task<List<Schedule>> GetSchedulesByProgramIdAsync(int programId)
+        {
+            return await _scheduleRepository.GetSchedulesByProgramIdAsync(programId);
+        }
         public async Task<Schedule> CreateScheduleAsync(Schedule schedule)
         {
             if (schedule.StartTime >= schedule.EndTime)
                 throw new Exception("StartTime must be earlier than EndTime.");
+
+            int schoolChannelId = schedule.Program?.SchoolChannelID ?? 0;
+
+            if (schoolChannelId == 0)
+            {
+                var program = await _programRepository.GetProgramByIdAsync(schedule.ProgramID);
+                if (program == null)
+                    throw new Exception("Program not found.");
+
+                schoolChannelId = program.SchoolChannelID;
+            }
+
+            bool isOverlapping = await _scheduleRepository.IsScheduleOverlappingAsync(schoolChannelId, schedule.StartTime, schedule.EndTime);
+            if (isOverlapping)
+                throw new Exception("Schedule time overlaps with another program on the same school channel.");
 
             return await _scheduleRepository.CreateScheduleAsync(schedule);
         }
@@ -94,14 +119,11 @@ namespace Services
                 StartTime = start,
                 EndTime = end,
                 Status = "Ready",
-                IsReplay = true
+                IsReplay = true,
+                VideoHistoryID = videoHistoryId
             };
 
             return await _scheduleRepository.CreateScheduleAsync(schedule);
-        }
-        public async Task<List<Schedule>> GetSchedulesByProgramIdAsync(int programId)
-        {
-            return await _scheduleRepository.GetSchedulesByProgramIdAsync(programId);
         }
     }
 

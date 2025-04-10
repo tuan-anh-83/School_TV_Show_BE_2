@@ -124,8 +124,12 @@ namespace DAOs
         public async Task<VideoHistory?> GetReplayVideoByProgramAndTimeAsync(int programId, DateTime start, DateTime end)
         {
             return await _context.VideoHistories
-                .Where(v => v.ProgramID == programId && v.Status == true && v.Type != "Live"
-                        && v.CreatedAt >= start && v.CreatedAt <= end)
+                .Where(v =>
+                    v.ProgramID == programId &&
+                    v.Status == true &&
+                    v.Type != "Live" &&
+                    v.CreatedAt >= start &&
+                    v.CreatedAt <= end)
                 .OrderByDescending(v => v.CreatedAt)
                 .FirstOrDefaultAsync();
         }
@@ -133,6 +137,25 @@ namespace DAOs
         public async Task<VideoHistory?> GetReplayVideoAsync(int programId, DateTime start, DateTime end)
         {
             return await GetReplayVideoByProgramAndTimeAsync(programId, start, end);
+        }
+        public async Task<List<VideoHistory>> GetVideosByProgramIdAsync(int programId)
+        {
+            return await _context.VideoHistories
+                .Where(v => v.ProgramID == programId && v.Status)
+                .OrderByDescending(v => v.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<VideoHistory>> GetExpiredUploadedVideosAsync(DateTime currentTime)
+        {
+            return await _context.VideoHistories
+                .Where(v =>
+                    v.Type != "Live" &&
+                    v.Status == true &&
+                    v.StreamAt.HasValue &&
+                    v.Duration.HasValue &&
+                    v.StreamAt.Value.AddMinutes(v.Duration.Value) <= currentTime)
+                .ToListAsync();
         }
     }
 }

@@ -266,7 +266,8 @@ namespace BOs.Data
                       .HasDefaultValueSql("GETDATE()")
                       .ValueGeneratedOnUpdate();
                 entity.Property(e => e.StreamAt)
-                      .HasColumnType("datetime");
+                      .HasColumnType("datetime")
+                      .IsRequired(false);
                 entity.HasOne(e => e.Program)
                       .WithMany(p => p.VideoHistories)
                       .HasForeignKey(e => e.ProgramID);

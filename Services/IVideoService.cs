@@ -24,5 +24,6 @@ namespace Services
         Task<bool> AddVideoWithCloudflareAsync(IFormFile videoFile, VideoHistory videoHistory);
         Task<VideoHistory?> GetReplayVideoByProgramAndTimeAsync(int programId, DateTime start, DateTime end);
         Task<VideoHistory?> GetReplayVideoAsync(int programId, DateTime startTime, DateTime endTime);
+        Task<List<VideoHistory>> GetVideosByProgramIdAsync(int programId);
     }
 }

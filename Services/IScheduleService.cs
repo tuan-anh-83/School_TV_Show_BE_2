@@ -22,5 +22,6 @@ namespace Services
         Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date);
         Task<Schedule> CreateReplayScheduleFromVideoAsync(int videoHistoryId, DateTime start, DateTime end);
         Task<List<Schedule>> GetSchedulesByProgramIdAsync(int programId);
+        Task<bool> IsScheduleOverlappingAsync(int schoolChannelId, DateTime startTime, DateTime endTime);
     }
 }

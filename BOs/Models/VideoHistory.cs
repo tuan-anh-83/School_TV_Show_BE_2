@@ -26,7 +26,7 @@ namespace BOs.Models
         public bool Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public DateTime StreamAt { get; set; }
+        public DateTime? StreamAt { get; set; }
         public double? Duration { get; set; }
 
         public Program Program { get; set; }
