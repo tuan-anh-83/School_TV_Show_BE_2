@@ -21,6 +21,7 @@ namespace Repos.Interface
         Task<List<VideoHistory>> GetVideosByDateAsync(DateTime date);
         Task<VideoHistory?> GetReplayVideoByProgramAndTimeAsync(int programId, DateTime start, DateTime end);
         Task<VideoHistory?> GetReplayVideoAsync(int programId, DateTime startTime, DateTime endTime);
+        Task<List<VideoHistory>> GetExpiredUploadedVideosAsync(DateTime currentTime);
 
     }
 }

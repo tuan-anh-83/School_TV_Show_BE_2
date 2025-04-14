@@ -134,5 +134,17 @@ namespace DAOs
         {
             return await GetReplayVideoByProgramAndTimeAsync(programId, start, end);
         }
+        public async Task<List<VideoHistory>> GetExpiredUploadedVideosAsync(DateTime currentTime)
+        {
+            return await _context.VideoHistories
+                .Where(v =>
+                    v.Status == true &&
+                    v.Type != "Live" &&
+                    v.Duration != null &&
+                    v.StreamAt.AddSeconds(v.Duration.Value) < currentTime
+                )
+                .ToListAsync();
+        }
+
     }
 }

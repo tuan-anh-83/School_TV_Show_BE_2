@@ -270,6 +270,12 @@ namespace Services.Implements
 
             return result?.Result?.Status?.State?.ToLower() == "live";
         }
+        public async Task<bool> CheckLiveInputExistsAsync(string cloudflareStreamId)
+        {
+            var checkUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{cloudflareStreamId}";
+            var response = await _httpClient.GetAsync(checkUrl);
+            return response.IsSuccessStatusCode;
+        }
 
         public async Task<VideoHistory> GetLiveStreamByIdAsync(int id) => await _repository.GetLiveStreamByIdAsync(id);
         public async Task<IEnumerable<VideoHistory>> GetActiveLiveStreamsAsync() => await _repository.GetActiveLiveStreamsAsync();
