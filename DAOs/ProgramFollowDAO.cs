@@ -32,66 +32,56 @@ namespace DAOs
 
         public async Task<List<ProgramFollow>> GetAllAsync()
         {
-            return await _context.ProgramFollows
-                .Include(pf => pf.Account)
-                .Include(pf => pf.Program)
-                .ToListAsync();
+            return await _context.ProgramFollows.ToListAsync();
         }
 
         public async Task<ProgramFollow?> GetByIdAsync(int id)
         {
-            return await _context.ProgramFollows
-                .Include(pf => pf.Account)
-                .Include(pf => pf.Program)
-                .FirstOrDefaultAsync(pf => pf.ProgramFollowID == id);
+            return await _context.ProgramFollows.FindAsync(id);
         }
 
         public async Task<List<ProgramFollow>> GetByAccountIdAsync(int accountId)
         {
             return await _context.ProgramFollows
-                .Where(pf => pf.AccountID == accountId)
-                .Include(pf => pf.Program)
+                .Where(f => f.AccountID == accountId)
                 .ToListAsync();
         }
 
         public async Task<bool> AddAsync(ProgramFollow programFollow)
         {
-            await _context.ProgramFollows.AddAsync(programFollow);
-            return await SaveAsync();
+            _context.ProgramFollows.Add(programFollow);
+            return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<bool> UpdateAsync(ProgramFollow programFollow)
         {
-            var existing = await GetByIdAsync(programFollow.ProgramFollowID);
-            if (existing == null) return false;
-
-            _context.Entry(existing).CurrentValues.SetValues(programFollow);
-            return await SaveAsync();
+            _context.ProgramFollows.Update(programFollow);
+            return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var programFollow = await GetByIdAsync(id);
-            if (programFollow == null) return false;
+            var follow = await _context.ProgramFollows.FindAsync(id);
+            if (follow == null) return false;
 
-            _context.ProgramFollows.Remove(programFollow);
-            return await SaveAsync();
+            _context.ProgramFollows.Remove(follow);
+            return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<int> CountByProgramAsync(int programId)
         {
-            return await _context.ProgramFollows.CountAsync(pf => pf.ProgramID == programId);
+            return await _context.ProgramFollows.CountAsync(f => f.ProgramID == programId);
         }
 
-        public async Task<ProgramFollow?> GetByAccountAndProgramAsync(int accountId, int programId)
+        public async Task<ProgramFollow> GetByAccountAndProgramAsync(int accountId, int programId)
         {
             return await _context.ProgramFollows
-                .FirstOrDefaultAsync(pf => pf.AccountID == accountId && pf.ProgramID == programId);
+                .FirstOrDefaultAsync(f => f.AccountID == accountId && f.ProgramID == programId);
         }
 
         public async Task<ProgramFollow> CreateProgramFollowAsync(ProgramFollow follow)
         {
-            await _context.ProgramFollows.AddAsync(follow);
+            _context.ProgramFollows.Add(follow);
             await _context.SaveChangesAsync();
             return follow;
         }
@@ -103,9 +93,17 @@ namespace DAOs
             return follow;
         }
 
-        private async Task<bool> SaveAsync()
+        public async Task<List<ProgramFollow>> GetFollowersByProgramIdAsync(int programId)
         {
-            return await _context.SaveChangesAsync() > 0;
+            return await _context.ProgramFollows
+                .Where(f => f.ProgramID == programId)
+                .ToListAsync();
+        }
+        public async Task<List<ProgramFollow>> GetByProgramIdAsync(int programId)
+        {
+            return await _context.ProgramFollows
+                .Where(f => f.ProgramID == programId)
+                .ToListAsync();
         }
     }
 }

@@ -119,5 +119,9 @@ namespace Services
             await _programFollowRepository.UpdateProgramFollowAsync(follow);
             return follow;
         }
+        public async Task<List<ProgramFollow>> GetByProgramIdAsync(int programId)
+        {
+            return await _programFollowRepository.GetByProgramIdAsync(programId);
+        }
     }
 }

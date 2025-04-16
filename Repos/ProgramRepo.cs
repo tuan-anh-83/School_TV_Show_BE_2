@@ -64,5 +64,10 @@ namespace Repos
         {
             return await ProgramDAO.Instance.GetProgramsWithVideoHistoryAsync();
         }
+
+        public async Task<List<Program>> GetProgramsByChannelIdWithIncludesAsync(int channelId)
+        {
+            return await ProgramDAO.Instance.GetProgramsByChannelIdWithIncludesAsync((int)channelId);
+        }
     }
 }

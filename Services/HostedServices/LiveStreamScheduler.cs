@@ -30,18 +30,17 @@ namespace Services.HostedServices
             _scopeFactory = scopeFactory;
             _hubContext = hubContext;
         }
-
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("LiveStreamScheduler is starting.");
 
+            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
             while (!stoppingToken.IsCancellationRequested)
             {
-                var currentTime = TimeZoneInfo.ConvertTimeFromUtc(
-                    DateTime.UtcNow,
-                    TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")
-                );
-                _logger.LogInformation("[Scheduler Tick] Vietnam time now: {CurrentTime}", currentTime);
+                var utcNow = DateTime.UtcNow;
+                var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, vietnamTimeZone);
+                _logger.LogInformation("[Scheduler Tick] Vietnam time now: {CurrentTime}", localNow);
 
                 using var scope = _scopeFactory.CreateScope();
                 var repository = scope.ServiceProvider.GetRequiredService<ILiveStreamRepo>();
@@ -52,32 +51,81 @@ namespace Services.HostedServices
 
                 try
                 {
-                    var pending = await repository.GetPendingSchedulesAsync(currentTime.AddMinutes(1));
+                    var pending = await repository.GetPendingSchedulesAsync(utcNow.AddMinutes(5));
                     _logger.LogInformation("Pending schedules to prepare: {Count}", pending.Count);
+
                     foreach (var s in pending)
                     {
                         s.Status = "Ready";
                         _logger.LogInformation("Schedule {ScheduleID} marked as READY.", s.ScheduleID);
+
+                        var program = s.Program ?? await repository.GetProgramByIdAsync(s.ProgramID);
+                        if (program == null)
+                        {
+                            _logger.LogWarning("Program not found for ScheduleID {ScheduleID}", s.ScheduleID);
+                            continue;
+                        }
+
+                        var school = program.SchoolChannel ?? await repository.GetSchoolChannelByIdAsync(program.SchoolChannelID);
+                        if (school == null)
+                        {
+                            _logger.LogWarning("SchoolChannel not found for ProgramID {ProgramID}", program.ProgramID);
+                            continue;
+                        }
+
+                        try
+                        {
+                            var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                            var programFollowService = scope.ServiceProvider.GetRequiredService<IProgramFollowService>();
+                            var schoolFollowService = scope.ServiceProvider.GetRequiredService<ISchoolChannelFollowService>();
+
+                            var programFollowers = await programFollowService.GetByProgramIdAsync(program.ProgramID);
+                            var schoolFollowers = await schoolFollowService.GetFollowersBySchoolChannelIdAsync(school.SchoolChannelID);
+                            var notifiedAccountIds = programFollowers.Select(f => f.AccountID)
+                                                    .Union(schoolFollowers.Select(f => f.AccountID))
+                                                    .Distinct();
+
+                            foreach (var accId in notifiedAccountIds)
+                            {
+                                var noti = new Notification
+                                {
+                                    AccountID = accId,
+                                    Title = $"📺 Livestream từ {school.Name} sắp diễn ra!",
+                                    Content = $"Chương trình {program.ProgramName} sẽ phát sóng lúc {s.StartTime.ToLocalTime():HH:mm}",
+                                    CreatedAt = DateTime.UtcNow,
+                                    IsRead = false
+                                };
+
+                                await notificationService.CreateNotificationAsync(noti);
+                                await _hubContext.Clients.User(accId.ToString())
+                                    .SendAsync("ReceiveNotification", new { title = noti.Title, content = noti.Content });
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error sending notification to followers for ScheduleID {ScheduleID}", s.ScheduleID);
+                        }
                     }
 
-                    var lateSchedules = await repository.GetLateStartCandidatesAsync(currentTime);
+                    var lateSchedules = await repository.GetLateStartCandidatesAsync(utcNow);
                     foreach (var s in lateSchedules)
                     {
-                        if (!s.LiveStreamStarted && s.Status == "Ready" && currentTime >= s.StartTime.AddMinutes(2))
+                        if (!s.LiveStreamStarted && s.Status == "Ready" && utcNow >= s.StartTime.AddMinutes(5))
                         {
                             s.Status = "LateStart";
                             repository.UpdateSchedule(s);
-                            _logger.LogWarning("Schedule {ScheduleID} marked as LateStart at {CurrentTime}.", s.ScheduleID, currentTime);
+                            _logger.LogWarning("Schedule {ScheduleID} marked as LateStart at {CurrentTime}.", s.ScheduleID, localNow);
                         }
                     }
-                    var toStart = await repository.GetReadySchedulesAsync(currentTime);
+
+                    var toStart = await repository.GetReadySchedulesAsync(utcNow.AddMinutes(5));
                     _logger.LogInformation("Schedules to start: {Count}", toStart.Count);
 
                     foreach (var schedule in toStart)
                     {
                         if (schedule.IsReplay)
                         {
-                            if (currentTime >= schedule.EndTime)
+                            if (utcNow >= schedule.EndTime)
                             {
                                 var replayVideo = await videoRepo.GetReplayVideoByProgramAndTimeAsync(
                                     schedule.ProgramID,
@@ -93,7 +141,6 @@ namespace Services.HostedServices
                                 schedule.Status = "Ended";
                                 schedule.LiveStreamStarted = true;
                                 schedule.LiveStreamEnded = true;
-
                                 repository.UpdateSchedule(schedule);
                                 _logger.LogInformation("Replay schedule {ScheduleID} marked as Ended.", schedule.ScheduleID);
                             }
@@ -102,23 +149,18 @@ namespace Services.HostedServices
                                 schedule.Status = "Ready";
                                 schedule.LiveStreamStarted = true;
                                 schedule.LiveStreamEnded = true;
-
                                 repository.UpdateSchedule(schedule);
                                 _logger.LogInformation("Replay schedule {ScheduleID} marked as Ready (still playing).", schedule.ScheduleID);
                             }
-
                             continue;
                         }
 
                         var existingVideo = await repository.GetVideoHistoryByProgramIdAsync(schedule.ProgramID);
                         if (existingVideo == null)
                         {
-                            var program = schedule.Program;
-                            if (program == null)
-                            {
-                                program = await repository.GetProgramByIdAsync(schedule.ProgramID);
-                                schedule.Program = program;
-                            }
+                            var program = schedule.Program ?? await repository.GetProgramByIdAsync(schedule.ProgramID);
+                            schedule.Program = program;
+
                             if (!string.IsNullOrEmpty(program.CloudflareStreamId))
                             {
                                 bool stillExists = await streamService.CheckLiveInputExistsAsync(program.CloudflareStreamId);
@@ -126,23 +168,23 @@ namespace Services.HostedServices
                                 {
                                     program.CloudflareStreamId = null;
                                     await repository.UpdateProgramAsync(program);
-
                                     _logger.LogWarning("[Input Check] Old Cloudflare input not found, cleared CloudflareStreamId for ProgramID={0}", program.ProgramID);
                                 }
                             }
+
                             var video = new VideoHistory
                             {
                                 ProgramID = program.ProgramID,
                                 Description = $"Scheduled stream for program {program.ProgramName}",
-                                CreatedAt = currentTime,
-                                UpdatedAt = currentTime,
+                                CreatedAt = utcNow,
+                                UpdatedAt = utcNow,
                                 StreamAt = schedule.StartTime,
                                 Status = true,
                                 Type = "Live",
                                 CloudflareStreamId = program.CloudflareStreamId
                             };
-                            bool created = await streamService.StartLiveStreamAsync(video);
 
+                            bool created = await streamService.StartLiveStreamAsync(video);
                             if (created)
                             {
                                 schedule.Status = schedule.Status != "LateStart" ? "Ready" : "LateStart";
@@ -160,7 +202,8 @@ namespace Services.HostedServices
                                         schoolName
                                     );
 
-                                    _logger.LogInformation("Stream URL created and email sent to {Email} for ScheduleID {ScheduleID}.", streamerEmail, schedule.ScheduleID);
+                                    _logger.LogInformation("Stream URL created and email sent to {Email} for ScheduleID {ScheduleID}.",
+                                        streamerEmail, schedule.ScheduleID);
                                 }
                                 else
                                 {
@@ -207,31 +250,55 @@ namespace Services.HostedServices
                     {
                         var videoHistory = await repository.GetVideoHistoryByProgramIdAsync(schedule.ProgramID);
                         if (videoHistory == null) continue;
+
                         bool isStillStreaming = await streamService.CheckStreamerStartedAsync(videoHistory.CloudflareStreamId);
                         if (!isStillStreaming && !schedule.LiveStreamEnded)
                         {
-                            var success = await streamService.EndStreamAndReturnLinksAsync(videoHistory);
-                            if (success)
+                            if (utcNow < schedule.StartTime)
                             {
-                                schedule.Status = "EndedEarly";
-                                schedule.LiveStreamEnded = true;
+                                _logger.LogInformation("Skip early end check for ScheduleID {ScheduleID} - not yet time to stream (StartTime = {StartTime})", schedule.ScheduleID, schedule.StartTime);
+                                continue;
+                            }
 
-                                if (!schedule.LiveStreamStarted)
+                            if (utcNow < schedule.StartTime.AddMinutes(5))
+                            {
+                                _logger.LogInformation("Skip early end check for ScheduleID {ScheduleID} - within 5-minute grace after StartTime {StartTime}", schedule.ScheduleID, schedule.StartTime);
+                                continue;
+                            }
+
+                            if (utcNow >= schedule.EndTime)
+                            {
+                                var success = await streamService.EndStreamAndReturnLinksAsync(videoHistory);
+                                if (success)
                                 {
-                                    await videoRepo.DeleteVideoAsync(videoHistory.VideoHistoryID);
-                                    _logger.LogWarning("No livestream detected for ScheduleID {ScheduleID}. VideoHistory was deleted.", schedule.ScheduleID);
+                                    schedule.Status = "EndedEarly";
+                                    schedule.LiveStreamEnded = true;
+
+                                    if (!schedule.LiveStreamStarted)
+                                    {
+                                        await videoRepo.DeleteVideoAsync(videoHistory.VideoHistoryID);
+                                        _logger.LogWarning("No livestream detected for ScheduleID {ScheduleID}. VideoHistory was deleted.", schedule.ScheduleID);
+                                    }
+                                    else
+                                    {
+                                        schedule.VideoHistoryID = videoHistory.VideoHistoryID;
+                                    }
+
+                                    await repository.SaveChangesAsync();
                                 }
                                 else
                                 {
-                                    schedule.VideoHistoryID = videoHistory.VideoHistoryID;
+                                    _logger.LogWarning("Failed to end and save stream for ScheduleID {ScheduleID}", schedule.ScheduleID);
                                 }
-
-                                await repository.SaveChangesAsync();
+                            }
+                            else
+                            {
+                                _logger.LogInformation("Skip ending ScheduleID {ScheduleID} early - stream not active, but still within scheduled time.", schedule.ScheduleID);
                             }
                         }
                     }
 
-                    var overdueSchedules = await repository.GetOverdueSchedulesAsync(currentTime);
+                    var overdueSchedules = await repository.GetOverdueSchedulesAsync(utcNow);
                     foreach (var schedule in overdueSchedules)
                     {
                         if (schedule.LiveStreamStarted && !schedule.LiveStreamEnded)
@@ -262,14 +329,14 @@ namespace Services.HostedServices
                         }
                     }
 
-                    await CheckAndMarkEndedEarlySchedulesAsync(repository, streamService, currentTime);
+                    await CheckAndMarkEndedEarlySchedulesAsync(repository, streamService, utcNow);
                     await repository.SaveChangesAsync();
 
-                    var expiredVideos = await videoRepo.GetExpiredUploadedVideosAsync(currentTime);
+                    var expiredVideos = await videoRepo.GetExpiredUploadedVideosAsync(utcNow);
                     foreach (var video in expiredVideos)
                     {
                         video.Status = false;
-                        video.UpdatedAt = currentTime;
+                        video.UpdatedAt = utcNow;
                         _logger.LogInformation("[Expire] Uploaded video {VideoID} marked as inactive.", video.VideoHistoryID);
                     }
                     await repository.SaveChangesAsync();
@@ -284,7 +351,6 @@ namespace Services.HostedServices
 
             _logger.LogInformation("LiveStreamScheduler stopped.");
         }
-
         private async Task CheckAndMarkEndedEarlySchedulesAsync(ILiveStreamRepo repository, ILiveStreamService streamService, DateTime now)
         {
             var lateSchedules = await repository.GetLateStartSchedulesPastEndTimeAsync(now);

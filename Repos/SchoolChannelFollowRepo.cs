@@ -49,5 +49,15 @@ namespace Repos
         {
             return SchoolChannelFollowDAO.Instance.GetAllFollowedSchoolChannelsAsync();
         }
+
+        public Task<List<SchoolChannelFollow>> GetFollowersByChannelIdAsync(int channelId)
+        {
+            return SchoolChannelFollowDAO.Instance.GetFollowersByChannelIdAsync((int)channelId);
+        }
+
+        public Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId)
+        {
+            return SchoolChannelFollowDAO.Instance.GetFollowersBySchoolChannelIdAsync((int)schoolChannelId);
+        }
     }
 }

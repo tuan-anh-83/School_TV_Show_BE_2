@@ -14,10 +14,6 @@ namespace School_TV_Show.DTO
         [StringLength(255, ErrorMessage = "Website URL cannot exceed 255 characters.")]
         public string? Website { get; set; }
 
-        [EmailAddress(ErrorMessage = "Invalid email format.")]
-        [StringLength(255, ErrorMessage = "Email cannot exceed 255 characters.")]
-        public string? Email { get; set; }
-
         [StringLength(500, ErrorMessage = "Address cannot exceed 500 characters.")]
         public string? Address { get; set; }
     }

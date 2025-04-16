@@ -110,5 +110,19 @@ namespace DAOs
                 .Cast<object>()
                 .ToListAsync();
         }
+
+        public async Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId)
+        {
+            return await _context.Follows
+                .Where(f => f.SchoolChannelID == schoolChannelId && f.Status == "Followed")
+                .ToListAsync();
+        }
+
+        public async Task<List<SchoolChannelFollow>> GetFollowersByChannelIdAsync(int channelId)
+        {
+            return await _context.Follows
+                .Where(f => f.SchoolChannelID == channelId)
+                .ToListAsync();
+        }
     }
 }

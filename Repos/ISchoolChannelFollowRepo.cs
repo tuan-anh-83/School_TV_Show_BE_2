@@ -17,5 +17,8 @@ namespace Repos
         Task<bool> IsFollowingAsync(int accountId, int schoolChannelId);
         Task<IEnumerable<SchoolChannel>> GetFollowedSchoolChannelsAsync(int accountId);
         Task<List<object>> GetAllFollowedSchoolChannelsAsync();
+        Task<List<SchoolChannelFollow>> GetFollowersByChannelIdAsync(int channelId);
+        Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId);
+
     }
 }

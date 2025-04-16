@@ -2,10 +2,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using School_TV_Show.DTO;
 using Services;
 using Services.CloudFlareService;
+using Services.Hubs;
+using Repos;
 
 namespace School_TV_Show.Controllers
 {
@@ -17,17 +20,39 @@ namespace School_TV_Show.Controllers
         private readonly IVideoService _videoService;
         private readonly ILogger<VideoHistoryController> _logger;
         private readonly CloudflareSettings _cloudflareSettings;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly INotificationService _notificationService;
+        private readonly IProgramFollowRepo _programFollowRepository;
+        private readonly ISchoolChannelFollowRepo _schoolChannelFollowRepository;
+        private readonly IProgramService _programService;
 
         public VideoHistoryController(
             IVideoService videoService,
+            IOptions<CloudflareSettings> cloudflareOptions,
             ILogger<VideoHistoryController> logger,
-            IOptions<CloudflareSettings> cloudflareOptions)
+            IHubContext<NotificationHub> hubContext,
+            INotificationService notificationService,
+            IProgramFollowRepo programFollowRepository,
+            ISchoolChannelFollowRepo schoolChannelFollowRepository,
+            IProgramService programService)
         {
             _videoService = videoService;
-            _logger = logger;
             _cloudflareSettings = cloudflareOptions.Value;
+            _logger = logger;
+            _hubContext = hubContext;
+            _notificationService = notificationService;
+            _programFollowRepository = programFollowRepository;
+            _schoolChannelFollowRepository = schoolChannelFollowRepository;
+            _programService = programService;
         }
 
+        [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllVideos()
+        {
+            var videos = await _videoService.GetAllVideosAsync();
+            return Ok(videos);
+        }
         [HttpGet("program/{programId}/videos")]
         [Authorize(Roles = "SchoolOwner,Admin")]
         public async Task<IActionResult> GetVideosByProgramId(int programId)
@@ -48,13 +73,6 @@ namespace School_TV_Show.Controllers
             });
 
             return Ok(result);
-        }
-        [HttpGet("all")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAllVideos()
-        {
-            var videos = await _videoService.GetAllVideosAsync();
-            return Ok(videos);
         }
 
         [HttpGet("active")]
@@ -99,6 +117,53 @@ namespace School_TV_Show.Controllers
 
             if (!result)
                 return StatusCode(500, new { message = "Failed to upload video to Cloudflare." });
+
+            var program = videoHistory.Program ?? await _programService.GetProgramByIdAsync(videoHistory.ProgramID ?? 0);
+            int schoolChannelId = program.SchoolChannelID;
+
+            var programFollowers = await _programFollowRepository.GetFollowersByProgramIdAsync(program.ProgramID);
+            var channelFollowers = await _schoolChannelFollowRepository.GetFollowersByChannelIdAsync(schoolChannelId);
+
+            var allFollowerIds = programFollowers.Select(f => f.AccountID)
+                .Concat(channelFollowers.Select(f => f.AccountID))
+                .Distinct();
+
+            foreach (var accountId in allFollowerIds)
+            {
+                var notification = new Notification
+                {
+                    ProgramID = program.ProgramID,
+                    SchoolChannelID = schoolChannelId,
+                    AccountID = accountId,
+                    Title = "New Video Uploaded",
+                    Message = $"A new video has been uploaded to {program.ProgramName}.",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _notificationService.CreateNotificationAsync(notification);
+                await _hubContext.Clients.User(accountId.ToString())
+                    .SendAsync("ReceiveNotification", notification);
+            }
+
+            // === Auto create replay schedule if StreamAt & Duration exist ===
+            if (videoHistory.Duration != null && videoHistory.StreamAt != null)
+            {
+                var endTime = videoHistory.StreamAt.Value.AddSeconds(videoHistory.Duration.Value);
+
+                var schedule = new Schedule
+                {
+                    ProgramID = videoHistory.ProgramID ?? 0,
+                    StartTime = videoHistory.StreamAt.Value,
+                    EndTime = endTime,
+                    IsReplay = true,
+                    Status = "Pending",
+                    VideoHistoryID = videoHistory.VideoHistoryID
+                };
+
+                using var scope = HttpContext.RequestServices.CreateScope();
+                var scheduleService = scope.ServiceProvider.GetRequiredService<IScheduleService>();
+                await scheduleService.CreateScheduleAsync(schedule);
+            }
 
             return Ok(new
             {

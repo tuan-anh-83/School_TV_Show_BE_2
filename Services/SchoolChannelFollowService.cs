@@ -52,5 +52,9 @@ namespace Services
         {
             return await _followRepo.GetAllFollowedSchoolChannelsAsync();
         }
+        public async Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId)
+        {
+            return await _followRepo.GetFollowersBySchoolChannelIdAsync(schoolChannelId);
+        }
     }
 }

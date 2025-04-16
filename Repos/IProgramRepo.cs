@@ -18,5 +18,6 @@ namespace Repos
         Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId);
         Task<List<Program>> GetProgramsWithVideosAsync();
         Task<List<Program>> GetProgramsWithoutVideosAsync();
+        Task<List<Program>> GetProgramsByChannelIdWithIncludesAsync(int channelId);
     }
 }

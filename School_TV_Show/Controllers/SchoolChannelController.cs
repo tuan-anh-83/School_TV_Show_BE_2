@@ -13,12 +13,15 @@ namespace School_TV_Show.Controllers
     {
         private readonly ISchoolChannelService _service;
         private readonly ILogger<SchoolChannelController> _logger;
+        private readonly IAccountService _accountService;
 
-        public SchoolChannelController(ISchoolChannelService service, ILogger<SchoolChannelController> logger)
+        public SchoolChannelController(ISchoolChannelService service, IAccountService accountService, ILogger<SchoolChannelController> logger)
         {
             _service = service;
+            _accountService = accountService;
             _logger = logger;
         }
+
 
         // GET: api/schoolchannels/all
         [Authorize(Roles = "Admin")]
@@ -94,8 +97,7 @@ namespace School_TV_Show.Controllers
                                               .ToList();
                 return BadRequest(new { errors });
             }
-            if (!IsValidEmail(request.Email))
-                return BadRequest("Invalid email format.");
+
             if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Description))
                 return BadRequest("Name and Description are required.");
 
@@ -103,19 +105,21 @@ namespace School_TV_Show.Controllers
             if (accountId == null)
                 return Unauthorized("User is not authenticated.");
 
-            // Check if the account already has a school channel
             bool alreadyExists = await _service.DoesAccountHaveSchoolChannelAsync(accountId.Value);
             if (alreadyExists)
             {
                 return BadRequest("Each account can only create one school channel.");
             }
+            var account = await _accountService.GetAccountByIdAsync(accountId.Value);
+            if (account == null || string.IsNullOrWhiteSpace(account.Email))
+                return BadRequest("Unable to retrieve email from account.");
 
             var schoolChannel = new SchoolChannel
             {
                 Name = request.Name,
                 Description = request.Description,
                 Website = request.Website,
-                Email = request.Email,
+                Email = account.Email,
                 Address = request.Address,
                 AccountID = accountId.Value,
                 Status = true,
@@ -136,8 +140,6 @@ namespace School_TV_Show.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-
-        // PUT: api/schoolchannels/{id}
         [Authorize(Roles = "SchoolOwner")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateSchoolChannel(int id, [FromBody] UpdateSchoolChannelRequestDTO request)
@@ -172,13 +174,6 @@ namespace School_TV_Show.Controllers
             if (!string.IsNullOrWhiteSpace(request.Website))
                 schoolChannel.Website = request.Website;
 
-            if (!string.IsNullOrWhiteSpace(request.Email))
-            {
-                if (!IsValidEmail(request.Email))
-                    return BadRequest("Invalid email format.");
-
-                schoolChannel.Email = request.Email;
-            }
             schoolChannel.UpdatedAt = DateTime.UtcNow;
 
             try

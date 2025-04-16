@@ -169,5 +169,9 @@ namespace Repos
         {
             return await _dao.GetExpiredUploadedVideosAsync(currentTime);
         }
+        public async Task<SchoolChannel?> GetSchoolChannelByIdAsync(int schoolChannelId)
+        {
+            return await _dao.GetSchoolChannelByIdAsync(schoolChannelId);
+        }
     }
 }

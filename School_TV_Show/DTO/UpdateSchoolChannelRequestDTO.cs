@@ -13,9 +13,6 @@ namespace School_TV_Show.DTO
         [StringLength(255, ErrorMessage = "Address cannot exceed 255 characters.")]
         public string? Address { get; set; }
 
-        [StringLength(255, ErrorMessage = "Email cannot exceed 255 characters.")]
-        public string? Email { get; set; }
-
         [StringLength(255, ErrorMessage = "Website cannot exceed 255 characters.")]
         public string? Website { get; set; }
     }

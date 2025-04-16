@@ -59,5 +59,14 @@ namespace Repos
         {
             return await ProgramFollowDAO.Instance.UpdateProgramFollowAsync(follow);
         }
+        public async Task<List<ProgramFollow>> GetFollowersByProgramIdAsync(int programId)
+        {
+            return await ProgramFollowDAO.Instance.GetFollowersByProgramIdAsync(programId);
+        }
+
+        public async Task<List<ProgramFollow>> GetByProgramIdAsync(int programId)
+        {
+            return await ProgramFollowDAO.Instance.GetByProgramIdAsync((int)programId);
+        }
     }
 }

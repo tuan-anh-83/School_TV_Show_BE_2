@@ -19,5 +19,6 @@ namespace Services
         Task<ProgramFollow> CreateOrRefollowAsync(int accountId, int programId);
 
         Task<ProgramFollow> UpdateFollowStatusAsync(int programFollowId, string status);
+        Task<List<ProgramFollow>> GetByProgramIdAsync(int programId);
     }
 }

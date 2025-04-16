@@ -20,5 +20,8 @@ namespace Repos
         Task<ProgramFollow> GetByAccountAndProgramAsync(int accountId, int programId);
         Task<ProgramFollow> CreateProgramFollowAsync(ProgramFollow follow);
         Task<ProgramFollow> UpdateProgramFollowAsync(ProgramFollow follow);
+        Task<List<ProgramFollow>> GetFollowersByProgramIdAsync(int programId);
+        Task<List<ProgramFollow>> GetByProgramIdAsync(int programId);
+
     }
 }

@@ -30,12 +30,36 @@ namespace DAOs
             }
         }
 
+        public async Task<List<Program>> GetProgramsByChannelIdWithIncludesAsync(int channelId)
+        {
+            return await _context.Programs
+                .Where(p => p.SchoolChannelID == channelId)
+                .Include(p => p.SchoolChannel)
+                .Include(p => p.VideoHistories)
+                .Include(p => p.ProgramFollows)
+                .Include(p => p.Schedules)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<List<Program>> GetProgramsWithVideoHistoryAsync()
+        {
+            return await _context.Programs
+                .Where(p => p.VideoHistories.Any())
+                .ToListAsync();
+        }
+
+        public async Task<List<Program>> GetProgramsWithoutVideoHistoryAsync()
+        {
+            return await _context.Programs
+                .Where(p => !p.VideoHistories.Any())
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId)
         {
             return await _context.Programs
-                .Where(p => p.SchoolChannelID == channelId && p.Status == "Active")
-                .Include(p => p.SchoolChannel)
-                .Include(p => p.Schedules)
+                .Where(p => p.SchoolChannelID == channelId)
                 .ToListAsync();
         }
 
@@ -98,15 +122,25 @@ namespace DAOs
             if (program == null || program.ProgramID <= 0)
                 throw new ArgumentException("Invalid Program data.");
 
-            var existingProgram = await GetProgramByIdAsync(program.ProgramID);
+            var existingProgram = await _context.Programs
+                                        .Include(p => p.Schedules)
+                                        .FirstOrDefaultAsync(p => p.ProgramID == program.ProgramID);
             if (existingProgram == null)
                 throw new InvalidOperationException("Program not found.");
 
-            var existingSchoolChannel = await _context.SchoolChannels.FindAsync(program.SchoolChannelID);
-            if (existingSchoolChannel == null)
-                throw new InvalidOperationException("Invalid SchoolChannelID.");
+            bool isBeingDeactivated = !string.Equals(existingProgram.Status, "Inactive", StringComparison.OrdinalIgnoreCase)
+                                      && string.Equals(program.Status, "Inactive", StringComparison.OrdinalIgnoreCase);
 
             _context.Entry(existingProgram).CurrentValues.SetValues(program);
+
+            if (isBeingDeactivated && existingProgram.Schedules != null)
+            {
+                foreach (var schedule in existingProgram.Schedules)
+                {
+                    schedule.Status = "Inactive";
+                }
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -116,12 +150,22 @@ namespace DAOs
             if (programId <= 0)
                 throw new ArgumentException("Program ID must be greater than zero.");
 
-            var program = await GetProgramByIdAsync(programId);
+            var program = await _context.Programs
+                              .Include(p => p.Schedules)
+                              .FirstOrDefaultAsync(p => p.ProgramID == programId);
             if (program == null)
                 return false;
 
             program.Status = "Inactive";
             program.UpdatedAt = DateTime.UtcNow;
+
+            if (program.Schedules != null)
+            {
+                foreach (var schedule in program.Schedules)
+                {
+                    schedule.Status = "Inactive";
+                }
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -149,19 +193,6 @@ namespace DAOs
                 .Include(p => p.Schedules)
                 .Where(p => p.Schedules.Any(s => s.ScheduleID == scheduleId))
                 .CountAsync();
-        }
-        public async Task<List<Program>> GetProgramsWithVideoHistoryAsync()
-        {
-            return await _context.Programs
-                .Where(p => p.VideoHistories.Any())
-                .ToListAsync();
-        }
-
-        public async Task<List<Program>> GetProgramsWithoutVideoHistoryAsync()
-        {
-            return await _context.Programs
-                .Where(p => !p.VideoHistories.Any())
-                .ToListAsync();
         }
     }
 }

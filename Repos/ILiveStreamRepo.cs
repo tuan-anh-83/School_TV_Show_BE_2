@@ -39,5 +39,6 @@ namespace Repos
         Task<List<Schedule>> GetLateStartSchedulesPastEndTimeAsync(DateTime now);
         Task UpdateAsync(Schedule schedule);
         Task<VideoHistory?> GetVideoHistoryByProgramIdAsync(int programId);
+        Task<SchoolChannel?> GetSchoolChannelByIdAsync(int schoolChannelId);
     }
 }

@@ -2,8 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 using School_TV_Show.DTO;
 using Services;
+using Services.Hubs;
+using Repos;
 
 namespace School_TV_Show.Controllers
 {
@@ -15,13 +19,29 @@ namespace School_TV_Show.Controllers
         private readonly IVideoService _videoHistoryService;
         private readonly CloudflareSettings _cloudflareSettings;
         private readonly IProgramService _programService;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IProgramFollowRepo _programFollowRepository;
+        private readonly ISchoolChannelFollowRepo _schoolChannelFollowRepository;
+        private readonly INotificationService _notificationService;
 
-        public ScheduleController(IScheduleService scheduleService, IVideoService videoHistoryService, CloudflareSettings cloudflareSettings, IProgramService programService)
+        public ScheduleController(
+            IScheduleService scheduleService,
+            IVideoService videoHistoryService,
+            IProgramService programService,
+            IHubContext<NotificationHub> hubContext,
+            IProgramFollowRepo programFollowRepository,
+            ISchoolChannelFollowRepo schoolChannelFollowRepository,
+            INotificationService notificationService,
+            IOptions<CloudflareSettings> cloudflareOptions)
         {
             _scheduleService = scheduleService;
             _videoHistoryService = videoHistoryService;
-            _cloudflareSettings = cloudflareSettings;
             _programService = programService;
+            _hubContext = hubContext;
+            _programFollowRepository = programFollowRepository;
+            _schoolChannelFollowRepository = schoolChannelFollowRepository;
+            _notificationService = notificationService;
+            _cloudflareSettings = cloudflareOptions.Value;
         }
 
         [HttpPost]
@@ -48,6 +68,32 @@ namespace School_TV_Show.Controllers
             };
 
             var created = await _scheduleService.CreateScheduleAsync(schedule);
+            var programFollowers = await _programFollowRepository.GetFollowersByProgramIdAsync(request.ProgramID);
+            var channelFollowers = await _schoolChannelFollowRepository.GetFollowersByChannelIdAsync(program.SchoolChannelID);
+
+            var allFollowerIds = programFollowers
+                .Select(f => f.AccountID)
+                .Concat(channelFollowers.Select(f => f.AccountID))
+                .Distinct();
+
+            foreach (var accountId in allFollowerIds)
+            {
+                var notification = new Notification
+                {
+                    ProgramID = request.ProgramID,
+                    SchoolChannelID = program.SchoolChannelID,
+                    AccountID = accountId,
+                    Title = "New Schedule",
+                    Message = $"A new schedule has been added for {program.ProgramName}.",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _notificationService.CreateNotificationAsync(notification);
+
+                await _hubContext.Clients.User(accountId.ToString())
+                    .SendAsync("ReceiveNotification", notification);
+            }
+
             return Ok(new ApiResponse(true, "Schedule created", new
             {
                 scheduleId = created.ScheduleID,
@@ -56,6 +102,7 @@ namespace School_TV_Show.Controllers
                 status = created.Status
             }));
         }
+
 
         [HttpPost("replay-from-video")]
         public async Task<IActionResult> CreateReplayScheduleFromVideo([FromBody] CreateReplayScheduleRequest request)
@@ -124,7 +171,6 @@ namespace School_TV_Show.Controllers
         }
 
         [HttpGet("by-program/{programId}")]
-        [Authorize(Roles = "Admin,SchoolOwner,User")]
         public async Task<IActionResult> GetSchedulesByProgramId(int programId)
         {
             var schedules = await _scheduleService.GetSchedulesByProgramIdAsync(programId);

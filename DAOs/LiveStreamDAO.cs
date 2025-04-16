@@ -249,5 +249,10 @@ namespace DAL.DAO
                     v.StreamAt.Value.AddMinutes(v.Duration.Value) <= currentTime)
                 .ToListAsync();
         }
+
+        public async Task<SchoolChannel?> GetSchoolChannelByIdAsync(int schoolChannelId)
+        {
+            return await _context.SchoolChannels.FirstOrDefaultAsync(s => s.SchoolChannelID == schoolChannelId);
+        }
     }
 }

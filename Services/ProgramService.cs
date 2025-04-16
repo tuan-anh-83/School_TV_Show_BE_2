@@ -17,9 +17,19 @@ namespace Services
             _programRepository = programRepository;
         }
 
+        public async Task<List<Program>> GetProgramsWithVideosAsync()
+        {
+            return await _programRepository.GetProgramsWithVideosAsync();
+        }
+
+        public async Task<List<Program>> GetProgramsWithoutVideosAsync()
+        {
+            return await _programRepository.GetProgramsWithoutVideosAsync();
+        }
+
         public async Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId)
         {
-            return await _programRepository.GetProgramsByChannelIdAsync(channelId);
+            return await _programRepository.GetProgramsByChannelIdWithIncludesAsync(channelId);
         }
 
         public async Task<Program> CreateProgramAsync(Program program)
@@ -48,20 +58,11 @@ namespace Services
 
         public async Task<bool> UpdateProgramAsync(Program program)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-
-            if (program.ProgramID <= 0)
-                throw new ArgumentException("Invalid Program ID.");
-
             return await _programRepository.UpdateProgramAsync(program);
         }
 
         public async Task<bool> DeleteProgramAsync(int programId)
         {
-            if (programId <= 0)
-                throw new ArgumentException("Invalid Program ID.");
-
             return await _programRepository.DeleteProgramAsync(programId);
         }
 
@@ -92,15 +93,6 @@ namespace Services
                 throw new ArgumentException("Invalid Schedule ID.");
 
             return await _programRepository.CountProgramsByScheduleAsync(scheduleId);
-        }
-        public async Task<List<Program>> GetProgramsWithVideosAsync()
-        {
-            return await _programRepository.GetProgramsWithVideosAsync();
-        }
-
-        public async Task<List<Program>> GetProgramsWithoutVideosAsync()
-        {
-            return await _programRepository.GetProgramsWithoutVideosAsync();
         }
     }
 }
