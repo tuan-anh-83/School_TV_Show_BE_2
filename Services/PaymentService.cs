@@ -71,11 +71,11 @@ namespace Services
             using var scope = _scopeFactory.CreateScope();
             var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
 
-            var expiredOrders = await orderService.GetPendingOrdersOlderThanAsync(TimeSpan.FromMinutes(15));
+            var expiredOrders = await orderService.GetPendingOrdersOlderThanAsync(TimeSpan.FromMinutes(5));
 
             foreach (var order in expiredOrders)
             {
-                _logger.LogWarning($"⚠️ Order {order.OrderID} has exceeded 15 minutes without payment. Marking as 'Failed'.");
+                _logger.LogWarning($"⚠️ Order {order.OrderID} has exceeded 5 minutes without payment. Marking as 'Failed'.");
 
                 order.Status = "Failed";
                 await orderService.UpdateOrderAsync(order);
