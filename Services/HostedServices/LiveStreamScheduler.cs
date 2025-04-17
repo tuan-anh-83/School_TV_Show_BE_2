@@ -90,12 +90,12 @@ namespace Services.HostedServices
                                 var noti = new Notification
                                 {
                                     AccountID = accId,
-                                    Title = $"📺 Livestream từ {school.Name} sắp diễn ra!",
-                                    Content = $"Chương trình {program.ProgramName} sẽ phát sóng lúc {s.StartTime.ToLocalTime():HH:mm}",
+                                    Title = $"📺 Livestream from {school.Name} is about to start!",
+                                    Message = $"The program {program.ProgramName} will start at {s.StartTime.ToLocalTime():HH:mm}",
+                                    Content = $"The program {program.ProgramName} will start at {s.StartTime.ToLocalTime():HH:mm}",
                                     CreatedAt = DateTime.UtcNow,
                                     IsRead = false
                                 };
-
                                 await notificationService.CreateNotificationAsync(noti);
                                 await _hubContext.Clients.User(accId.ToString())
                                     .SendAsync("ReceiveNotification", new { title = noti.Title, content = noti.Content });
@@ -187,6 +187,8 @@ namespace Services.HostedServices
                             bool created = await streamService.StartLiveStreamAsync(video);
                             if (created)
                             {
+                                await repository.SaveChangesAsync();
+                                schedule.VideoHistoryID = video.VideoHistoryID;
                                 schedule.Status = schedule.Status != "LateStart" ? "Ready" : "LateStart";
                                 schedule.LiveStreamStarted = false;
 
