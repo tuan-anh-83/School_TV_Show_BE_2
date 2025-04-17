@@ -45,7 +45,6 @@ namespace BOs.Data
         public DbSet<ProgramFollow> ProgramFollows { get; set; }
         public DbSet<PaymentHistory> PaymentHistories { get; set; }
         public DbSet<AdSchedule> AdSchedules { get; set; }
-        public DbSet<Membership> Memberships { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -590,38 +589,6 @@ namespace BOs.Data
                     .HasDefaultValueSql("GETDATE()");
             });
 
-            #endregion
-
-            #region Membership 
-            modelBuilder.Entity<Membership>(entity => { 
-                entity.ToTable("Membership");
-                entity.HasKey(e => e.MembershipID);
-                entity.Property(e => e.MembershipID).ValueGeneratedOnAdd();
-
-                entity.Property(e => e.StartDate)
-                      .IsRequired();
-
-                entity.Property(e => e.ExpirationDate)
-                      .IsRequired();
-
-                entity.Property(e => e.RemainingDuration)
-                      .IsRequired();
-
-                entity.Property(e => e.IsActive)
-                      .IsRequired()
-                      .HasDefaultValue(true);
-
-                entity.HasOne(e => e.Account)
-                      .WithMany()
-                      .HasForeignKey(e => e.AccountID)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(e => e.Package)
-                      .WithMany()
-                      .HasForeignKey(e => e.PackageID)
-                      .OnDelete(DeleteBehavior.NoAction);
-
-            });
             #endregion
         }
 

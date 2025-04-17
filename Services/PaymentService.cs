@@ -25,7 +25,6 @@ namespace Services
         private Timer _timer;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<PaymentService> _logger;
-        private readonly IMembershipRepo _membershipRepo;
 
         public PaymentService(
             IOrderService orderService,
@@ -34,8 +33,7 @@ namespace Services
             IConfiguration configuration,
             IPaymentHistoryService paymentHistoryService,
             IServiceScopeFactory scopeFactory,
-            ILogger<PaymentService> logger,
-            IMembershipRepo membershipRepo)
+            ILogger<PaymentService> logger)
         {
             _orderService = orderService;
             _orderDetailService = orderDetailService;
@@ -44,7 +42,6 @@ namespace Services
             _checksumKey = configuration["Environment:PAYOS_CHECKSUM_KEY"];
             _scopeFactory = scopeFactory;
             _logger = logger;
-            _membershipRepo = membershipRepo;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -131,27 +128,6 @@ namespace Services
                 _logger.LogInformation($"✅ Order {order.OrderID} status updated to '{order.Status}'");
 
                 await _orderService.UpdateOrderAsync(order);
-
-                if (payment.Status == "Completed")
-                {
-                    var details = await _orderDetailService.GetOrderDetailsByOrderIdAsync(order.OrderID);
-                    foreach (var detail in details)
-                    {
-                        var membership = new Membership
-                        {
-                            AccountID = order.AccountID,
-                            PackageID = detail.PackageID,
-                            StartDate = DateTime.UtcNow,
-                            ExpirationDate = DateTime.UtcNow.AddDays(30),
-                            RemainingDuration = detail.Package.Duration,
-                            IsActive = true
-                        };
-
-                        var membershipService = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<IMembershipService>();
-                        await membershipService.CreateMembershipAsync(membership);
-                        _logger.LogInformation($"🎉 Membership created for Account {order.AccountID} with Package {detail.PackageID}");
-                    }
-                }
 
                 return true;
             }

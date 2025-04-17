@@ -90,7 +90,6 @@ builder.Services.AddScoped<IPaymentHistoryRepo, PaymentHistoryRepo>();
 builder.Services.AddScoped<IAdScheduleRepo, AdScheduleRepo>();
 builder.Services.AddScoped<ILiveStreamRepo, LiveStreamRepo>();
 builder.Services.AddScoped<ICategoryNewsRepo, CategoryNewsRepo>();
-builder.Services.AddScoped<IMembershipRepo, MembershipRepo>(); 
 builder.Services.AddScoped<IProgramFollowRepo, ProgramFollowRepo>();
 builder.Services.AddScoped<INotificationRepo, NotificationRepo>();
 
@@ -117,7 +116,6 @@ builder.Services.AddHttpClient<ILiveStreamService, LiveStreamService>();
 builder.Services.AddScoped<ISchoolChannelFollowService, SchoolChannelFollowService>();
 builder.Services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
 builder.Services.AddScoped<ICategoryNewsService, CategoryNewsService>();
-builder.Services.AddScoped<IMembershipService, MembershipService>();
 builder.Services.AddScoped<IProgramFollowService, ProgramFollowService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddHostedService<PendingAccountReminderService>();
