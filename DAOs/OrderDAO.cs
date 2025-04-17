@@ -34,14 +34,6 @@ namespace DAOs
 
         public async Task<Order> CreateOrderAsync(Order order)
         {
-            var existingOrder = await context.Orders
-                .FirstOrDefaultAsync(o => o.AccountID == order.AccountID && o.Status == "Pending");
-
-            if (existingOrder != null)
-            {
-                throw new Exception("Đơn thanh toán đã tồn tại");
-            }
-
             order.OrderCode = GenerateUniqueOrderCode();
             context.Orders.Add(order);
             await context.SaveChangesAsync();
