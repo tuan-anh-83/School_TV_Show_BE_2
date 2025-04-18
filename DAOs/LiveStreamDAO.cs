@@ -254,5 +254,14 @@ namespace DAL.DAO
         {
             return await _context.SchoolChannels.FirstOrDefaultAsync(s => s.SchoolChannelID == schoolChannelId);
         }
+        public async Task<SchoolChannel?> GetSchoolChannelByProgramIdAsync(int programId)
+        {
+            var program = await _context.Programs
+                .Include(p => p.SchoolChannel)
+                .FirstOrDefaultAsync(p => p.ProgramID == programId);
+
+            return program?.SchoolChannel;
+        }
+
     }
 }

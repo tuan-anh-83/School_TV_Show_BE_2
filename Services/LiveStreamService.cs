@@ -41,6 +41,14 @@ namespace Services
             var program = await _repository.GetProgramByIdAsync(stream.ProgramID.Value);
             if (program == null) return false;
 
+            // Check if the SchoolOwner's SchoolChannel has any remaining duration
+            var schoolChannel = await _repository.GetSchoolChannelByProgramIdAsync(program.ProgramID);
+            if (schoolChannel == null || schoolChannel.TotalDuration <= 0)
+            {
+                _logger.LogWarning("Cannot start live stream. The SchoolChannel has no remaining duration.");
+                return false; // Prevent starting the stream if duration is 0
+            }
+
             if (!string.IsNullOrEmpty(program.CloudflareStreamId))
             {
                 var checkUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{program.CloudflareStreamId}";
@@ -98,6 +106,7 @@ namespace Services
 
             return await _repository.AddVideoHistoryAsync(stream);
         }
+
 
         public async Task<bool> CheckStreamerStartedAsync(string cloudflareStreamId)
         {

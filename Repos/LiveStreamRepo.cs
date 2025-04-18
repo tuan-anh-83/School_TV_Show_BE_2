@@ -173,5 +173,10 @@ namespace Repos
         {
             return await _dao.GetSchoolChannelByIdAsync(schoolChannelId);
         }
+        public async Task<SchoolChannel?> GetSchoolChannelByProgramIdAsync(int programId)
+        {
+            return await _dao.GetSchoolChannelByProgramIdAsync(programId);
+        }
+
     }
 }
