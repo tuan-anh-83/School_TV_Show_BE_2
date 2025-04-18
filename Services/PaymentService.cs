@@ -1,4 +1,5 @@
 ﻿using BOs.Models;
+using DAOs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -93,6 +94,28 @@ namespace Services
                 _logger.LogInformation($"✅ Order {order.OrderID} status updated to '{order.Status}'");
 
                 await _orderService.UpdateOrderAsync(order);
+
+                if (order.Status == "Completed")
+                {
+                    using var scope = _scopeFactory.CreateScope();
+
+                    var orderDetailService = scope.ServiceProvider.GetRequiredService<IOrderDetailService>();
+                    var orderDetails = await orderDetailService.GetOrderDetailsByOrderIdAsync(order.OrderID);
+                    var firstDetail = orderDetails.FirstOrDefault();
+                    if (firstDetail != null && firstDetail.Package != null)
+                    {
+                        int packageDuration = firstDetail.Package.Duration;
+
+                        var schoolChannelDao = scope.ServiceProvider.GetRequiredService<SchoolChannelDAO>();
+                        var schoolChannel = await schoolChannelDao.GetByIdAsync(order.AccountID);
+                        if (schoolChannel != null)
+                        {
+                            schoolChannel.TotalDuration = (schoolChannel.TotalDuration ?? 0) + packageDuration;
+                            await schoolChannelDao.UpdateAsync(schoolChannel);
+                            _logger.LogInformation($"🕒 Updated SchoolChannel {schoolChannel.SchoolChannelID} TotalDuration to {schoolChannel.TotalDuration}");
+                        }
+                    }
+                }
 
                 return true;
             }

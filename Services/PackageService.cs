@@ -53,5 +53,10 @@ namespace Services
         {
             return await _packageRepo.GetTopPurchasedPackagesAsync();
         }
+        public async Task<(Package?, int?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId)
+        {
+            return await _packageRepo.GetCurrentPackageAndDurationByAccountIdAsync(accountId);
+        }
+
     }
 }

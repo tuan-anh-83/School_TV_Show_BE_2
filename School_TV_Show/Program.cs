@@ -124,6 +124,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 //builder.Services.AddSingleton<OrderTrackingService>();
 builder.Services.AddHostedService<LiveStreamScheduler>();
+builder.Services.AddHostedService<DurationTrackingService>();
 builder.Services.AddScoped<IAdScheduleService, AdScheduleService>();
 builder.Services.AddHttpClient<ICloudflareUploadService, CloudflareUploadService>();
 

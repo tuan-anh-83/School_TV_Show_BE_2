@@ -17,5 +17,7 @@ namespace Repos
         Task<List<Package>> GetAllActivePackagesAsync();
         Task<List<Package>> SearchPackagesByNameAsync(string name);
         Task<List<object>> GetTopPurchasedPackagesAsync();
+        Task<(Package?, int?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId);
+
     }
 }

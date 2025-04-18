@@ -116,5 +116,30 @@ namespace DAOs
 
             return rankedPackages.Cast<object>().ToList();
         }
+        public async Task<(Package?, int?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId)
+        {
+            var latestPaidOrder = await context.Orders
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Package)
+                .Where(o => o.AccountID == accountId && o.Status == "Paid")
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (latestPaidOrder == null)
+                return null;
+
+            var packageDetail = latestPaidOrder.OrderDetails.FirstOrDefault();
+            if (packageDetail == null)
+                return null;
+
+            var schoolChannel = await context.SchoolChannels
+                .FirstOrDefaultAsync(sc => sc.AccountID == accountId);
+
+            if (schoolChannel == null)
+                return null;
+
+            return (packageDetail.Package, schoolChannel.TotalDuration);
+        }
+
     }
 }

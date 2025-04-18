@@ -157,5 +157,13 @@ namespace DAOs
                     v.StreamAt.Value.AddMinutes(v.Duration.Value) <= currentTime)
                 .ToListAsync();
         }
+
+        public async Task<List<VideoHistory>> GetVideosUploadedAfterAsync(DateTime timestamp)
+        {
+            return await _context.VideoHistories
+                .Include(v => v.Program)
+                .Where(v => v.CreatedAt >= timestamp && v.Duration != null)
+                .ToListAsync();
+        }
     }
 }

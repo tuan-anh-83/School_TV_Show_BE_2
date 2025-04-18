@@ -191,5 +191,38 @@ namespace School_TV_Show.Controllers
             }
         }
 
+        [Authorize(Roles = "SchoolOwner")]
+        [HttpGet("current")]
+        public async Task<IActionResult> GetCurrentPackageInfo()
+        {
+            try
+            {
+                var accountId = int.Parse(User.FindFirst("AccountID")?.Value ?? "0");
+
+                var result = await _packageService.GetCurrentPackageAndDurationByAccountIdAsync(accountId);
+
+                if (result == null)
+                    return NotFound("No active package found.");
+
+                var (package, remainingDuration) = result.Value;
+
+                var dto = new CurrentPackageInfoDTO
+                {
+                    PackageID = package.PackageID,
+                    PackageName = package.Name,
+                    Duration = package.Duration,
+                    Price = package.Price,
+                    RemainingDuration = remainingDuration
+                };
+
+                return Ok(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving current package info");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
     }
 }

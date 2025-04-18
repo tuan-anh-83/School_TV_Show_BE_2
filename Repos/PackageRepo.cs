@@ -50,5 +50,10 @@ namespace Repos
         {
             return await OrderDAO.Instance.GetPendingOrdersOlderThanAsync(timeSpan);
         }
+        public async Task<(Package?, int?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId)
+        {
+            return await PackageDAO.Instance.GetCurrentPackageAndDurationByAccountIdAsync(accountId);
+        }
+
     }
 }

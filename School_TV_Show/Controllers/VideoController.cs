@@ -102,6 +102,20 @@ namespace School_TV_Show.Controllers
             if (request.VideoFile == null || request.VideoFile.Length == 0)
                 return BadRequest(new { message = "No video file provided." });
 
+            if (!request.ProgramID.HasValue)
+                return BadRequest(new { message = "Program ID is required." });
+
+            var program = await _programService.GetProgramByIdAsync(request.ProgramID.Value);
+            if (program == null)
+                return BadRequest(new { message = "Program not found." });
+
+            var schoolChannel = program.SchoolChannel;
+            if (schoolChannel == null)
+                return BadRequest(new { message = "SchoolChannel not found." });
+
+            if (schoolChannel.TotalDuration <= 0)
+                return BadRequest(new { message = "You have no remaining duration to upload a video. Please purchase a new package." });
+
             var videoHistory = new VideoHistory
             {
                 ProgramID = request.ProgramID,
@@ -118,7 +132,6 @@ namespace School_TV_Show.Controllers
             if (!result)
                 return StatusCode(500, new { message = "Failed to upload video to Cloudflare." });
 
-            var program = videoHistory.Program ?? await _programService.GetProgramByIdAsync(videoHistory.ProgramID ?? 0);
             int schoolChannelId = program.SchoolChannelID;
 
             var programFollowers = await _programFollowRepository.GetFollowersByProgramIdAsync(program.ProgramID);
@@ -179,6 +192,7 @@ namespace School_TV_Show.Controllers
                 }
             });
         }
+
 
         [HttpPut("{id}")]
         [Authorize(Roles = "SchoolOwner")]
