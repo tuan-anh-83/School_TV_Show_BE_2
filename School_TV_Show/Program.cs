@@ -119,6 +119,7 @@ builder.Services.AddScoped<ICategoryNewsService, CategoryNewsService>();
 builder.Services.AddScoped<IProgramFollowService, ProgramFollowService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddHostedService<PendingAccountReminderService>();
+builder.Services.AddHostedService<ExpiredOrderCheckerService>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 //builder.Services.AddSingleton<OrderTrackingService>();
