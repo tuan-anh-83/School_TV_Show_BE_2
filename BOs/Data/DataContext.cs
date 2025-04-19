@@ -116,7 +116,9 @@ namespace BOs.Data
                 entity.Property(e => e.UpdatedAt)
                       .HasColumnType("datetime2")
                       .HasDefaultValueSql("GETDATE()");
-
+                entity.Property(e => e.TotalDuration)
+                      .HasColumnType("int")
+                      .IsRequired(false);
                 entity.HasOne(e => e.Account)
                       .WithMany()
                       .HasForeignKey(e => e.AccountID)
