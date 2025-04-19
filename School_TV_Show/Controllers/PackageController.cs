@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using School_TV_Show.DTO;
 using Services;
+using System.Security.Claims;
 
 namespace School_TV_Show.Controllers
 {
@@ -197,7 +198,9 @@ namespace School_TV_Show.Controllers
         {
             try
             {
-                var accountId = int.Parse(User.FindFirst("AccountID")?.Value ?? "0");
+                var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (accountIdClaim == null || !int.TryParse(accountIdClaim.Value, out int accountId))
+                    return Unauthorized("Invalid account identifier.");
 
                 var result = await _packageService.GetCurrentPackageAndDurationByAccountIdAsync(accountId);
 

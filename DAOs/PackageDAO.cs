@@ -118,25 +118,50 @@ namespace DAOs
         }
         public async Task<(Package?, int?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId)
         {
+            Console.WriteLine($"[DEBUG] Start fetching current package for AccountID: {accountId}");
+
             var latestPaidOrder = await context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Package)
-                .Where(o => o.AccountID == accountId && o.Status == "Paid")
+                .Where(o => o.AccountID == accountId && o.Status == "Completed")
                 .OrderByDescending(o => o.CreatedAt)
                 .FirstOrDefaultAsync();
 
             if (latestPaidOrder == null)
+            {
+                Console.WriteLine("[DEBUG] No completed order found for account.");
                 return null;
+            }
+
+            Console.WriteLine($"[DEBUG] Found completed order: OrderID = {latestPaidOrder.OrderID}, CreatedAt = {latestPaidOrder.CreatedAt}");
 
             var packageDetail = latestPaidOrder.OrderDetails.FirstOrDefault();
             if (packageDetail == null)
+            {
+                Console.WriteLine("[DEBUG] Order found, but no order detail available.");
                 return null;
+            }
+
+            Console.WriteLine($"[DEBUG] Found OrderDetail: PackageID = {packageDetail.PackageID}");
+
+            if (packageDetail.Package == null)
+            {
+                Console.WriteLine("[DEBUG] Package in OrderDetail is null.");
+                return null;
+            }
+
+            Console.WriteLine($"[DEBUG] Package loaded: Name = {packageDetail.Package.Name}, Duration = {packageDetail.Package.Duration}");
 
             var schoolChannel = await context.SchoolChannels
                 .FirstOrDefaultAsync(sc => sc.AccountID == accountId);
 
             if (schoolChannel == null)
+            {
+                Console.WriteLine("[DEBUG] No SchoolChannel found for account.");
                 return null;
+            }
+
+            Console.WriteLine($"[DEBUG] SchoolChannel found: TotalDuration = {schoolChannel.TotalDuration}");
 
             return (packageDetail.Package, schoolChannel.TotalDuration);
         }
