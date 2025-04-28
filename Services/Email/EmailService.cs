@@ -36,27 +36,22 @@ namespace Services.Email
             string baseUrl = "rtmps://live.cloudflare.com:443/live";
             string streamKey = fullUrl.Replace(baseUrl, "").Trim('/');
 
-            // Chuyển giờ UTC sang giờ Việt Nam
-            TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-            DateTime vnStartTime = TimeZoneInfo.ConvertTimeFromUtc(startTime, vnTimeZone);
-            DateTime vnEndTime = TimeZoneInfo.ConvertTimeFromUtc(endTime, vnTimeZone);
-
             var mailMessage = new MailMessage
             {
                 From = new MailAddress(senderEmail),
-                Subject = $"🎬 Chương trình từ {schoolName} sắp lên sóng – chuẩn bị livestream",
+                Subject = $"🎬 Livestream từ {schoolName} sắp bắt đầu!",
                 Body = $@"
-<div style='font-family:Segoe UI,Roboto,sans-serif;padding:20px;background-color:#f5f5f5;color:#333'>
-    <div style='max-width:600px;margin:auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1)'>
+        <div style='font-family:Segoe UI,Roboto,sans-serif;padding:20px;background-color:#f5f5f5;color:#333'>
+            <div style='max-width:600px;margin:auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1)'>
 
-        <h2 style='color:#007BFF'>📺 Thông báo phát sóng đến {schoolName}</h2>
-        <p>Kính gửi Ban quản lý kênh <strong>{schoolName}</strong>,</p>
-        <p>Chương trình phát trực tiếp do trường tổ chức đã được lên lịch và chuẩn bị bắt đầu. Quý vị vui lòng kiểm tra và chuẩn bị các thông tin kỹ thuật sau để đảm bảo buổi phát sóng diễn ra suôn sẻ:</p>
+                <h2 style='color:#007BFF'>📺 Thông báo từ {schoolName}</h2>
+                <p>Xin chào <strong>Streamer</strong>,</p>
+                <p>Buổi livestream của bạn đã được lên lịch và sắp bắt đầu. Dưới đây là thông tin chi tiết:</p>
 
-        <table style='width:100%;margin-top:10px;margin-bottom:20px'>
+                <table style='width:100%;margin-top:10px;margin-bottom:20px'>
                     <tr>
                         <td style='font-weight:bold'>📅 Thời gian phát:</td>
-                        <td>{vnStartTime:HH:mm} - {vnEndTime:HH:mm} (Giờ Việt Nam)</td>
+                        <td>{startTime:HH:mm} - {endTime:HH:mm} (UTC)</td>
                     </tr>
                     <tr>
                         <td style='font-weight:bold'>🔗 RTMP Server:</td>
@@ -68,19 +63,18 @@ namespace Services.Email
                     </tr>
                 </table>
 
-        <p>Vui lòng sao chép <strong>RTMP Server</strong> và <strong>Stream Key</strong> vào phần mềm phát trực tiếp (như OBS).</p>
+                <p>Hãy sao chép <strong>RTMP Server</strong> và <strong>Stream Key</strong> vào phần mềm phát trực tiếp (như OBS).</p>
+                <p>Nếu gặp bất kỳ vấn đề nào, vui lòng liên hệ quản trị viên của trường.</p>
 
-        <hr style='margin:30px 0;border:none;border-top:1px solid #ddd'>
-        <p style='font-size:12px;color:#777'>
-            Đây là email tự động từ hệ thống <strong>School TV Show</strong>.<br/>
-            Vui lòng không phản hồi lại email này.
-        </p>
-    </div>
-</div>",
+                <hr style='margin:30px 0;border:none;border-top:1px solid #ddd'>
+                <p style='font-size:12px;color:#777'>
+                    Đây là email tự động từ hệ thống <strong>School TV Show</strong>.<br/>
+                    Vui lòng không phản hồi lại email này.
+                </p>
+            </div>
+        </div>",
                 IsBodyHtml = true
             };
-
-
 
             mailMessage.To.Add(email);
             await smtpClient.SendMailAsync(mailMessage);

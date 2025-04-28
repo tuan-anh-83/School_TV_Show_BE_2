@@ -2,10 +2,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using School_TV_Show.DTO;
+using System.Security.Claims;
 using Services;
 using Services.Hubs;
-using System.Security.Claims;
+using School_TV_Show.DTO;
 
 namespace School_TV_Show.Controllers
 {

@@ -11,7 +11,6 @@ namespace Repos
     {
         Task AddPaymentHistoryAsync(Payment payment);
         Task<List<PaymentHistory>> GetPaymentHistoriesByPaymentIdAsync(int paymentId);
-
         Task<List<PaymentHistory>> GetAllPaymentHistoriesAsync();
         Task<List<PaymentHistory>> GetPaymentHistoriesByUserIdAsync(int userId);
     }

@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 namespace DAOs
 {
     public class SchoolChannelFollowDAO
-
     {
         private static SchoolChannelFollowDAO instance = null;
         private readonly DataContext _context;
@@ -30,19 +29,6 @@ namespace DAOs
                 }
                 return instance;
             }
-        }
-        public async Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId)
-        {
-            return await _context.SchoolChannelFollows
-                .Where(f => f.SchoolChannelID == schoolChannelId && f.Status == "Followed")
-                .ToListAsync();
-        }
-
-        public async Task<List<SchoolChannelFollow>> GetFollowersByChannelIdAsync(int channelId)
-        {
-            return await _context.SchoolChannelFollows
-                .Where(f => f.SchoolChannelID == channelId)
-                .ToListAsync();
         }
 
         public async Task AddFollowAsync(SchoolChannelFollow follow)
@@ -122,6 +108,20 @@ namespace DAOs
                 })
                 .OrderByDescending(g => g.FollowCount)
                 .Cast<object>()
+                .ToListAsync();
+        }
+
+        public async Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId)
+        {
+            return await _context.Follows
+                .Where(f => f.SchoolChannelID == schoolChannelId && f.Status == "Followed")
+                .ToListAsync();
+        }
+
+        public async Task<List<SchoolChannelFollow>> GetFollowersByChannelIdAsync(int channelId)
+        {
+            return await _context.Follows
+                .Where(f => f.SchoolChannelID == channelId)
                 .ToListAsync();
         }
     }

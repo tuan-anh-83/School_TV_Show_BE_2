@@ -19,7 +19,6 @@ namespace School_TV_Show.Controllers
         private readonly IOrderDetailService _orderDetailService;
         private readonly IPackageService _packageService;
         private readonly PayOS _payOS;
-        private readonly OrderTrackingService _orderTrackingService;
         public OrderController(
            IOrderService orderService,
            IOrderDetailService orderDetailService,
@@ -121,6 +120,7 @@ namespace School_TV_Show.Controllers
         }
 
 
+
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllOrders()
@@ -195,7 +195,7 @@ namespace School_TV_Show.Controllers
                     return Unauthorized("Invalid account information.");
                 }
 
-                var orders = await _orderService.GetOrdersByAccountIdAsync(accountId);
+                var orders = await _orderService.GetOrderHistoryAsync(accountId);
                 if (orders == null || !orders.Any())
                 {
                     return NotFound(new { message = "No orders found for this account." });
@@ -212,7 +212,7 @@ namespace School_TV_Show.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateOrder(int id, [FromBody] UpdateOrderRequestDTO request)
+        public async Task<IActionResult> UpdateOrder(int id, [FromBody] UpdateOrderRequest request)
         {
             if (request == null || string.IsNullOrEmpty(request.Status))
             {
@@ -240,7 +240,6 @@ namespace School_TV_Show.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-
         [HttpGet("statistics")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetOrderStatistics(
@@ -259,6 +258,7 @@ namespace School_TV_Show.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
 
     }
 

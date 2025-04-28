@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
-namespace School_TV_Show.DTO
+﻿namespace School_TV_Show.DTO
 {
     public class ApiResponse
     {

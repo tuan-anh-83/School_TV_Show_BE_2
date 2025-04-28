@@ -8,7 +8,7 @@ namespace School_TV_Show.DTO
         [StringLength(255, ErrorMessage = "Name cannot exceed 255 characters.")]
         public string Name { get; set; } = string.Empty;
 
-        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters.")]
+        [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters.")]
         public string? Description { get; set; }
 
         [StringLength(255, ErrorMessage = "Website URL cannot exceed 255 characters.")]

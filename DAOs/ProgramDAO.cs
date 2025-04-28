@@ -4,14 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DAOs
 {
     public class ProgramDAO
     {
-
         private static ProgramDAO instance = null;
         private readonly DataContext _context;
 
@@ -196,6 +194,5 @@ namespace DAOs
                 .Where(p => p.Schedules.Any(s => s.ScheduleID == scheduleId))
                 .CountAsync();
         }
-
     }
 }

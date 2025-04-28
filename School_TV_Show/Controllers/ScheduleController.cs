@@ -4,11 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
-using Repos;
 using School_TV_Show.DTO;
 using Services;
 using Services.Hubs;
-
+using Repos;
 
 namespace School_TV_Show.Controllers
 {
@@ -17,7 +16,7 @@ namespace School_TV_Show.Controllers
     public class ScheduleController : ControllerBase
     {
         private readonly IScheduleService _scheduleService;
-        private readonly IVideoHistoryService _videoHistoryService;
+        private readonly IVideoService _videoHistoryService;
         private readonly CloudflareSettings _cloudflareSettings;
         private readonly IProgramService _programService;
         private readonly IHubContext<NotificationHub> _hubContext;
@@ -27,7 +26,7 @@ namespace School_TV_Show.Controllers
 
         public ScheduleController(
             IScheduleService scheduleService,
-            IVideoHistoryService videoHistoryService,
+            IVideoService videoHistoryService,
             IProgramService programService,
             IHubContext<NotificationHub> hubContext,
             IProgramFollowRepo programFollowRepository,
@@ -284,29 +283,14 @@ namespace School_TV_Show.Controllers
                     if (schedule.LiveStreamEnded && schedule.VideoHistoryID.HasValue)
                     {
                         var video = await _videoHistoryService.GetVideoByIdAsync(schedule.VideoHistoryID.Value);
-                        if (video != null)
+                        if (video != null && !string.IsNullOrEmpty(video.CloudflareStreamId))
                         {
+                            iframeUrl = $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{video.CloudflareStreamId}/iframe";
                             playbackUrl = video.PlaybackUrl;
                             mp4Url = video.MP4Url;
                             duration = video.Duration;
                             description = video.Description;
                             videoHistoryId = video.VideoHistoryID;
-
-                            if (schedule.Status == "EndedEarly" || schedule.Status == "Ended")
-                            {
-                                if (video.Status == false)
-                                {
-                                    iframeUrl = playbackUrl;
-                                }
-                                else if (video.Status == true && !string.IsNullOrEmpty(video.CloudflareStreamId))
-                                {
-                                    iframeUrl = $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{video.CloudflareStreamId}/iframe";
-                                }
-                            }
-                            else if (!string.IsNullOrEmpty(video.CloudflareStreamId))
-                            {
-                                iframeUrl = $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{video.CloudflareStreamId}/iframe";
-                            }
                         }
                     }
                     else
@@ -345,7 +329,6 @@ namespace School_TV_Show.Controllers
 
             return Ok(new ApiResponse(true, "Schedules for channel and date", result));
         }
-
 
         [HttpGet("timeline")]
         public async Task<IActionResult> GetSchedulesTimeline()

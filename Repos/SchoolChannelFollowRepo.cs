@@ -10,54 +10,54 @@ namespace Repos
 {
     public class SchoolChannelFollowRepo : ISchoolChannelFollowRepo
     {
-        public  Task AddFollowAsync(SchoolChannelFollow follow)
+        public Task AddFollowAsync(SchoolChannelFollow follow)
         {
-           return  SchoolChannelFollowDAO.Instance.AddFollowAsync(follow);
+            return SchoolChannelFollowDAO.Instance.AddFollowAsync(follow);
         }
 
-        public Task<List<object>> GetAllFollowedSchoolChannelsAsync()
+        public async Task<List<SchoolChannelFollow>> GetAllFollowsAsync()
         {
-           return SchoolChannelFollowDAO.Instance.GetAllFollowedSchoolChannelsAsync();
+            return await SchoolChannelFollowDAO.Instance.GetAllFollowsAsync();   
         }
 
-        public Task<List<SchoolChannelFollow>> GetAllFollowsAsync()
+        public async Task<SchoolChannelFollow> GetFollowAsync(int accountId, int schoolChannelId)
         {
-            return SchoolChannelFollowDAO.Instance.GetAllFollowsAsync();    
+            return await SchoolChannelFollowDAO.Instance.GetFollowAsync(accountId, schoolChannelId);
         }
 
-        public Task<SchoolChannelFollow> GetFollowAsync(int accountId, int schoolChannelId)
+        public async Task<int> GetFollowCountAsync(int schoolChannelId)
         {
-            return SchoolChannelFollowDAO.Instance.GetFollowAsync(accountId, schoolChannelId);
+            return await SchoolChannelFollowDAO.Instance.GetFollowCountAsync(schoolChannelId);
         }
 
-        public Task<int> GetFollowCountAsync(int schoolChannelId)
+        public async Task<bool> IsFollowingAsync(int accountId, int schoolChannelId)
         {
-            return SchoolChannelFollowDAO.Instance.GetFollowCountAsync (schoolChannelId);
-        }
-
-        public Task<IEnumerable<SchoolChannel>> GetFollowedSchoolChannelsAsync(int accountId)
-        {
-            return SchoolChannelFollowDAO.Instance.GetFollowedSchoolChannelsAsync (accountId);
-        }
-
-        public Task<List<SchoolChannelFollow>> GetFollowersByChannelIdAsync(int channelId)
-        {
-            return SchoolChannelFollowDAO.Instance.GetFollowersByChannelIdAsync (channelId);
-        }
-
-        public Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId)
-        {
-            return SchoolChannelFollowDAO.Instance.GetFollowersBySchoolChannelIdAsync (schoolChannelId);
-        }
-
-        public Task<bool> IsFollowingAsync(int accountId, int schoolChannelId)
-        {
-            return SchoolChannelFollowDAO.Instance.IsFollowingAsync (accountId, schoolChannelId);
+            return await SchoolChannelFollowDAO.Instance.IsFollowingAsync(accountId, schoolChannelId);   
         }
 
         public Task UpdateFollowStatusAsync(int accountId, int schoolChannelId, string status)
         {
-            return SchoolChannelFollowDAO.Instance.UpdateFollowStatusAsync (accountId, schoolChannelId, status);
+            return SchoolChannelFollowDAO.Instance.UpdateFollowStatusAsync(accountId, schoolChannelId, status);    
+        }
+
+        public Task<IEnumerable<SchoolChannel>> GetFollowedSchoolChannelsAsync(int accountId)
+        {
+            return SchoolChannelFollowDAO.Instance.GetFollowedSchoolChannelsAsync(accountId);
+        }
+
+        public Task<List<object>> GetAllFollowedSchoolChannelsAsync()
+        {
+            return SchoolChannelFollowDAO.Instance.GetAllFollowedSchoolChannelsAsync();
+        }
+
+        public Task<List<SchoolChannelFollow>> GetFollowersByChannelIdAsync(int channelId)
+        {
+            return SchoolChannelFollowDAO.Instance.GetFollowersByChannelIdAsync((int)channelId);
+        }
+
+        public Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId)
+        {
+            return SchoolChannelFollowDAO.Instance.GetFollowersBySchoolChannelIdAsync((int)schoolChannelId);
         }
     }
 }

@@ -34,21 +34,19 @@ namespace Services
                 throw new Exception("StartTime must be earlier than EndTime.");
 
             int schoolChannelId = schedule.Program?.SchoolChannelID ?? 0;
+
             if (schoolChannelId == 0)
             {
                 var program = await _programRepository.GetProgramByIdAsync(schedule.ProgramID);
                 if (program == null)
                     throw new Exception("Program not found.");
+
                 schoolChannelId = program.SchoolChannelID;
             }
 
-            if (!schedule.IsReplay)
-            {
-                bool isOverlapping = await _scheduleRepository
-                    .IsScheduleOverlappingAsync(schoolChannelId, schedule.StartTime, schedule.EndTime);
-                if (isOverlapping)
-                    throw new Exception("Schedule time overlaps with another program on the same school channel.");
-            }
+            bool isOverlapping = await _scheduleRepository.IsScheduleOverlappingAsync(schoolChannelId, schedule.StartTime, schedule.EndTime);
+            if (isOverlapping)
+                throw new Exception("Schedule time overlaps with another program on the same school channel.");
 
             return await _scheduleRepository.CreateScheduleAsync(schedule);
         }
@@ -128,4 +126,5 @@ namespace Services
             return await _scheduleRepository.CreateScheduleAsync(schedule);
         }
     }
+
 }

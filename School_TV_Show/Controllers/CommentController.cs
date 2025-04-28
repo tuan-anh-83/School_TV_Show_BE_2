@@ -5,28 +5,29 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using School_TV_Show.DTO;
 using Services;
-using Services.Hubs;
 using System.Security.Claims;
+using Services.Hubs;
 
 namespace School_TV_Show.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+
     public class CommentController : ControllerBase
     {
         private readonly ICommentService _commentService;
-        private readonly IVideoHistoryService _videoHistoryService;
+        private readonly IVideoService _videoService;
         private readonly IHubContext<LiveStreamHub> _hubContext;
         private readonly ILogger<CommentController> _logger;
 
         public CommentController(
             ICommentService commentService,
-            IVideoHistoryService videoHistoryService,
+            IVideoService videoService,
             IHubContext<LiveStreamHub> hubContext,
             ILogger<CommentController> logger)
         {
             _commentService = commentService;
-            _videoHistoryService = videoHistoryService;
+            _videoService = videoService;
             _hubContext = hubContext;
             _logger = logger;
         }
@@ -134,7 +135,7 @@ namespace School_TV_Show.Controllers
             if (accountIdClaim == null || !int.TryParse(accountIdClaim.Value, out int accountId))
                 return Unauthorized("Invalid account identifier.");
 
-            var video = await _videoHistoryService.GetVideoByIdAsync(request.VideoHistoryID);
+            var video = await _videoService.GetVideoByIdAsync(request.VideoHistoryID);
             if (video == null || !video.Status)
                 return BadRequest("The specified video does not exist or is not active.");
 

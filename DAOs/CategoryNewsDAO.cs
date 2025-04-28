@@ -11,7 +11,7 @@ namespace DAOs
 {
     public class CategoryNewsDAO
     {
-        private static CategoryNewsDAO instance = null;
+        private static CategoryNewsDAO? instance = null;
         private readonly DataContext _context;
 
         private CategoryNewsDAO()
@@ -30,7 +30,6 @@ namespace DAOs
                 return instance;
             }
         }
-
         public async Task<IEnumerable<CategoryNews>> GetAllAsync()
         {
             return await _context.CategoryNews.Include(c => c.News).ToListAsync();

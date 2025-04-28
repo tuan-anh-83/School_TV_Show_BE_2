@@ -23,7 +23,6 @@ namespace BOs.Data
         }
 
         public DbSet<Account> Accounts { get; set; }
-        public DbSet<AdSchedule> AdSchedules { get; set; }
         public DbSet<SchoolChannel> SchoolChannels { get; set; }
         public DbSet<News> News { get; set; }
         public DbSet<Schedule> Schedules { get; set; }
@@ -42,15 +41,11 @@ namespace BOs.Data
         public DbSet<Role> Roles { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
         public DbSet<SchoolChannelFollow> Follows { get; set; }
-        public DbSet<SchoolChannelFollow> SchoolChannelFollows { get; set; }
         public DbSet<CategoryNews> CategoryNews { get; set; }
         public DbSet<ProgramFollow> ProgramFollows { get; set; }
-
-
         public DbSet<PaymentHistory> PaymentHistories { get; set; }
+        public DbSet<AdSchedule> AdSchedules { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-
-        public DbSet<AccountPackage> AccountPackages { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer(GetConnectionString());
@@ -85,32 +80,6 @@ namespace BOs.Data
                       .WithMany()
                       .HasForeignKey(e => e.RoleID)
                       .OnDelete(DeleteBehavior.Restrict);
-            });
-            #endregion
-
-            #region AccountPackage
-            modelBuilder.Entity<AccountPackage>(entity =>
-            {
-                entity.ToTable("AccountPackage");
-                entity.HasKey(e => e.AccountPackageID);
-                entity.Property(e => e.AccountPackageID).ValueGeneratedOnAdd();
-                entity.Property(e => e.AccountID).IsRequired();
-                entity.Property(e => e.PackageID).IsRequired();
-                entity.Property(e => e.TotalHoursAllowed).IsRequired();
-                entity.Property(e => e.HoursUsed).IsRequired();
-                entity.Property(e => e.RemainingHours).IsRequired();
-                entity.Property(e => e.StartDate).HasDefaultValueSql("GETDATE()");
-                entity.Property(e => e.ExpiredAt).HasDefaultValueSql("GETDATE()");
-
-                entity.HasOne(e => e.Account)
-                    .WithMany(a => a.AccountPackages) // CHỈ RÕ phía ngược lại
-                    .HasForeignKey(e => e.AccountID)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(e => e.Package)
-                    .WithMany(p => p.AccountPackages) // CHỈ RÕ phía ngược lại
-                    .HasForeignKey(e => e.PackageID)
-                    .OnDelete(DeleteBehavior.Cascade);
             });
             #endregion
 
@@ -299,7 +268,8 @@ namespace BOs.Data
                       .HasDefaultValueSql("GETDATE()")
                       .ValueGeneratedOnUpdate();
                 entity.Property(e => e.StreamAt)
-                      .HasColumnType("datetime");
+                      .HasColumnType("datetime")
+                      .IsRequired(false);
                 entity.HasOne(e => e.Program)
                       .WithMany(p => p.VideoHistories)
                       .HasForeignKey(e => e.ProgramID);
@@ -489,7 +459,7 @@ namespace BOs.Data
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.Package)
-                      .WithMany()
+                      .WithMany(p => p.OrderDetails) 
                       .HasForeignKey(e => e.PackageID)
                       .OnDelete(DeleteBehavior.NoAction);
             });
@@ -622,8 +592,6 @@ namespace BOs.Data
             });
 
             #endregion
-
-            OnModelCreatingPartial(modelBuilder);
         }
 
         /* protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

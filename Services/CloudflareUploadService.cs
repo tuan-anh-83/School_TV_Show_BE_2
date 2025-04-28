@@ -11,11 +11,6 @@ using System.Threading.Tasks;
 
 namespace Services
 {
-    public interface ICloudflareUploadService
-    {
-        Task<(string StreamId, string PlaybackUrl, string Mp4Url)> UploadVideoAsync(IFormFile videoFile);
-    }
-
     public class CloudflareUploadService : ICloudflareUploadService
     {
         private readonly CloudflareSettings _settings;
@@ -58,4 +53,3 @@ namespace Services
         }
     }
 }
-

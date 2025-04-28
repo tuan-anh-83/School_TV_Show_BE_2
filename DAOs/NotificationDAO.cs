@@ -4,14 +4,13 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DAOs
 {
     public class NotificationDAO
     {
-        private static NotificationDAO instance = null;
+        private static NotificationDAO? instance = null;
         private readonly DataContext _context;
 
         private NotificationDAO()

@@ -1,8 +1,5 @@
 ﻿using BOs.Models;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repos
@@ -19,8 +16,8 @@ namespace Repos
         Task<int> CountProgramsByStatusAsync(string status);
         Task<int> CountProgramsByScheduleAsync(int scheduleId);
         Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId);
-        Task<List<Program>> GetProgramsWithVideoHistoryAsync();
-        Task<List<Program>> GetProgramsWithoutVideoHistoryAsync();
+        Task<List<Program>> GetProgramsWithVideosAsync();
+        Task<List<Program>> GetProgramsWithoutVideosAsync();
         Task<List<Program>> GetProgramsByChannelIdWithIncludesAsync(int channelId);
     }
 }

@@ -35,7 +35,6 @@ namespace School_TV_Show.Controllers
             if (categoryNews == null)
                 return BadRequest("CategoryNews data is required.");
 
-            // Đảm bảo ID không được sử dụng khi tạo mới
             var newCategory = new CategoryNews
             {
                 CategoryName = categoryNews.CategoryName,
@@ -45,6 +44,7 @@ namespace School_TV_Show.Controllers
             var createdCategory = await _categoryNewsService.AddAsync(newCategory);
             return CreatedAtAction(nameof(GetById), new { id = createdCategory.CategoryNewsID }, createdCategory);
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update([FromRoute] int id, CategoryNews categoryNews)

@@ -4,14 +4,13 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DAOs
 {
     public class AdScheduleDAO
     {
-        private static AdScheduleDAO instance = null;
+        private static AdScheduleDAO? instance = null;
         private readonly DataContext _context;
 
         private AdScheduleDAO()
@@ -31,40 +30,52 @@ namespace DAOs
             }
         }
 
-        public async Task<IEnumerable<AdSchedule>> GetAllAsync()
+        public async Task<List<AdSchedule>> GetAllAsync()
         {
             return await _context.AdSchedules.ToListAsync();
         }
 
-        public async Task<AdSchedule> GetByIdAsync(int id)
+        public async Task<AdSchedule?> GetByIdAsync(int id)
         {
             return await _context.AdSchedules.FindAsync(id);
         }
 
-        public async Task AddAsync(AdSchedule adSchedule)
+        public async Task<bool> AddAsync(AdSchedule adSchedule)
         {
             await _context.AdSchedules.AddAsync(adSchedule);
+            return await SaveAsync();
         }
 
-        public void Update(AdSchedule adSchedule)
+        public async Task<bool> UpdateAsync(AdSchedule adSchedule)
         {
-            _context.AdSchedules.Update(adSchedule);
+            var existingAdSchedule = await GetByIdAsync(adSchedule.AdScheduleID);
+            if (existingAdSchedule == null)
+                return false;
+
+            _context.Entry(existingAdSchedule).CurrentValues.SetValues(adSchedule);
+            return await SaveAsync();
         }
 
-        public void Delete(AdSchedule adSchedule)
+        public async Task<bool> DeleteAsync(int adScheduleId)
         {
+            var adSchedule = await GetByIdAsync(adScheduleId);
+            if (adSchedule == null)
+                return false;
+
             _context.AdSchedules.Remove(adSchedule);
+            return await SaveAsync();
         }
-        public async Task<IEnumerable<AdSchedule>> FilterByDateRangeAsync(DateTime startTime, DateTime endTime)
+
+        public async Task<List<AdSchedule>> FilterByDateRangeAsync(DateTime startTime, DateTime endTime)
         {
             return await _context.AdSchedules
                 .Where(ad => ad.StartTime >= startTime && ad.EndTime <= endTime)
                 .ToListAsync();
         }
 
-        public async Task SaveAsync()
+        public async Task<bool> SaveAsync()
         {
-            await _context.SaveChangesAsync();
+            return await _context.SaveChangesAsync() > 0;
         }
     }
 }

@@ -12,11 +12,11 @@ namespace DAOs
     public class PackageDAO
     {
         private static PackageDAO instance = null;
-        private readonly DataContext _context;
+        private readonly DataContext context;
 
         private PackageDAO()
         {
-            _context = new DataContext();
+            context = new DataContext();
         }
 
         public static PackageDAO Instance
@@ -33,24 +33,24 @@ namespace DAOs
 
         public async Task<List<Package>> GetAllPackagesAsync()
         {
-            return await _context.Packages
+            return await context.Packages
                 .Where(p => p.Status == "Active")
                 .ToListAsync();
         }
 
         public async Task<List<Package>> GetAllActivePackagesAsync()
         {
-            return await _context.Packages.ToListAsync();
+            return await context.Packages.ToListAsync();
         }
 
         public async Task<Package?> GetPackageByIdAsync(int packageId)
         {
-            return await _context.Packages
+            return await context.Packages
                 .FirstOrDefaultAsync(p => p.PackageID == packageId && p.Status == "Active");
         }
         public async Task<List<Package>> SearchPackagesByNameAsync(string name)
         {
-            return await _context.Packages
+            return await context.Packages
                 .Where(p => EF.Functions.Like(p.Name, $"%{name}%"))
                 .ToListAsync();
         }
@@ -60,8 +60,8 @@ namespace DAOs
             package.Status = "Active";
             package.CreatedAt = DateTime.UtcNow;
             package.UpdatedAt = DateTime.UtcNow;
-            await _context.Packages.AddAsync(package);
-            await _context.SaveChangesAsync();
+            await context.Packages.AddAsync(package);
+            await context.SaveChangesAsync();
             return true;
         }
 
@@ -75,9 +75,8 @@ namespace DAOs
             existingPackage.Description = package.Description;
             existingPackage.Price = package.Price;
             existingPackage.Duration = package.Duration;
-            existingPackage.TimeDuration = package.TimeDuration;
             existingPackage.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
 
@@ -89,12 +88,12 @@ namespace DAOs
 
             package.Status = "Inactive";
             package.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
         public async Task<List<object>> GetTopPurchasedPackagesAsync()
         {
-            var result = await _context.OrderDetails
+            var result = await context.OrderDetails
                 .GroupBy(od => od.PackageID)
                 .Select(g => new
                 {
@@ -104,7 +103,7 @@ namespace DAOs
                 .OrderByDescending(x => x.PurchaseCount)
                 .ToListAsync();
 
-            var packageDetails = await _context.Packages
+            var packageDetails = await context.Packages
                 .Where(p => result.Select(r => r.PackageID).Contains(p.PackageID))
                 .ToListAsync();
 
@@ -117,12 +116,11 @@ namespace DAOs
 
             return rankedPackages.Cast<object>().ToList();
         }
-
-        public async Task<(Package?, double?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId)
+        public async Task<(Package?, int?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId)
         {
             Console.WriteLine($"[DEBUG] Start fetching current package for AccountID: {accountId}");
 
-            var latestPaidOrder = await _context.Orders
+            var latestPaidOrder = await context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Package)
                 .Where(o => o.AccountID == accountId && o.Status == "Completed")
@@ -154,41 +152,19 @@ namespace DAOs
 
             Console.WriteLine($"[DEBUG] Package loaded: Name = {packageDetail.Package.Name}, Duration = {packageDetail.Package.Duration}");
 
-            var accountPackage = await _context.AccountPackages
-                .FirstOrDefaultAsync(ap => ap.AccountID == accountId);
-
-            if (accountPackage == null)
-            {
-                Console.WriteLine("[DEBUG] No account package found for account.");
-                return null;
-            }
-
-            Console.WriteLine($"[DEBUG] AccountPackage found: RemainingHours = {accountPackage.RemainingHours}");
-
-            return (packageDetail.Package, accountPackage.RemainingHours);
-        }
-
-        public async Task<AccountPackage?> GetCurrentPackageAndDurationByProgramIdAsync(int programId)
-        {
-            Console.WriteLine($"[DEBUG] Start fetching current package for ProgramID: {programId}");
-
-            var schoolChannel = await _context.Programs
-                .Include(p => p.SchoolChannel)
-                .Where(p => p.ProgramID == programId)
-                .Select(p => p.SchoolChannel)
-                .FirstOrDefaultAsync();
+            var schoolChannel = await context.SchoolChannels
+                .FirstOrDefaultAsync(sc => sc.AccountID == accountId);
 
             if (schoolChannel == null)
             {
-                Console.WriteLine("[DEBUG] No school channel found for program.");
+                Console.WriteLine("[DEBUG] No SchoolChannel found for account.");
                 return null;
             }
 
-            var accountPackage = await _context.AccountPackages
-                .Where(ap => ap.AccountID == schoolChannel.AccountID)
-                .FirstOrDefaultAsync();
+            Console.WriteLine($"[DEBUG] SchoolChannel found: TotalDuration = {schoolChannel.TotalDuration}");
 
-            return accountPackage;
+            return (packageDetail.Package, schoolChannel.TotalDuration);
         }
+
     }
 }

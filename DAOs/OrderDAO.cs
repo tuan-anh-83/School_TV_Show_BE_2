@@ -13,11 +13,11 @@ namespace DAOs
     public class OrderDAO
     {
         private static OrderDAO instance = null;
-        private readonly DataContext _context;
+        private readonly DataContext context;
 
         private OrderDAO()
         {
-            _context = new DataContext();
+            context = new DataContext();
         }
 
         public static OrderDAO Instance
@@ -35,13 +35,16 @@ namespace DAOs
         public async Task<Order> CreateOrderAsync(Order order)
         {
             order.OrderCode = GenerateUniqueOrderCode();
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
+            context.Orders.Add(order);
+            await context.SaveChangesAsync();
             return order;
         }
+
+
+
         public async Task<Order> GetOrderByIdAsync(int orderId)
         {
-            return await _context.Orders
+            return await context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Package)
                 .FirstOrDefaultAsync(o => o.OrderID == orderId);
@@ -49,7 +52,7 @@ namespace DAOs
 
         public async Task<IEnumerable<Order>> GetAllOrdersAsync()
         {
-            return await _context.Orders
+            return await context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Package)
                 .ToListAsync();
@@ -57,13 +60,13 @@ namespace DAOs
 
         public async Task<Order> UpdateOrderAsync(Order order)
         {
-            _context.Orders.Update(order);
-            await _context.SaveChangesAsync();
+            context.Orders.Update(order);
+            await context.SaveChangesAsync();
             return order;
         }
         public async Task<IEnumerable<Order>> GetOrdersByAccountIdAsync(int accountId)
         {
-            return await _context.Orders
+            return await context.Orders
                 .Where(o => o.AccountID == accountId)
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Package)
@@ -71,7 +74,7 @@ namespace DAOs
         }
         public async Task<object> GetOrderStatisticsAsync(DateTime? startDate, DateTime? endDate, string interval)
         {
-            var query = _context.Orders.AsQueryable();
+            var query = context.Orders.AsQueryable();
 
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -112,18 +115,9 @@ namespace DAOs
             };
         }
 
-        public async Task<bool> DeleteOrderAsync(int orderId)
-        {
-            var order = await _context.Orders.FindAsync(orderId);
-            if (order == null) return false;
-
-            _context.Orders.Remove(order);
-            return await _context.SaveChangesAsync() > 0;
-        }
-
         public async Task<Order> GetOrderByOrderCodeAsync(long orderCode)
         {
-            return await _context.Orders
+            return await context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Package)
                 .FirstOrDefaultAsync(o => o.OrderCode == orderCode);
@@ -132,11 +126,10 @@ namespace DAOs
         {
             return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
-
         public async Task<IEnumerable<Order>> GetPendingOrdersOlderThanAsync(TimeSpan timeSpan)
         {
             var thresholdTime = DateTime.UtcNow - timeSpan;
-            return await _context.Orders
+            return await context.Orders
                 .Where(o => o.Status == "Pending" && o.CreatedAt <= thresholdTime)
                 .ToListAsync();
         }

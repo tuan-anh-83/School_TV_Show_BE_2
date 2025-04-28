@@ -4,6 +4,9 @@ namespace School_TV_Show.DTO
 {
     public class UpdateProgramRequest
     {
+        [Required]
+        public int ScheduleID { get; set; }
+
         [Required(ErrorMessage = "Program name is required.")]
         [StringLength(100, ErrorMessage = "Program name cannot exceed 100 characters.")]
         public string ProgramName { get; set; }

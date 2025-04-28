@@ -1,10 +1,10 @@
 ﻿using BOs.Models;
-using Repos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Repos;
 
 namespace Services
 {
@@ -19,12 +19,12 @@ namespace Services
 
         public async Task<List<Program>> GetProgramsWithVideosAsync()
         {
-            return await _programRepository.GetProgramsWithVideoHistoryAsync();
+            return await _programRepository.GetProgramsWithVideosAsync();
         }
 
         public async Task<List<Program>> GetProgramsWithoutVideosAsync()
         {
-            return await _programRepository.GetProgramsWithoutVideoHistoryAsync();
+            return await _programRepository.GetProgramsWithoutVideosAsync();
         }
 
         public async Task<IEnumerable<Program>> GetProgramsByChannelIdAsync(int channelId)

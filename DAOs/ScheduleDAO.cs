@@ -16,7 +16,7 @@ namespace DAOs
 
         private ScheduleDAO()
         {
-            _context = new DataContext();
+           _context = new DataContext();
         }
 
         public static ScheduleDAO Instance
@@ -31,23 +31,13 @@ namespace DAOs
             }
         }
 
-        public async Task<bool> IsScheduleOverlappingAsync(int schoolChannelId, DateTime startTime, DateTime endTime)
-        {
-            return await _context.Schedules
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
-                .AnyAsync(s => s.Program.SchoolChannelID == schoolChannelId &&
-                               ((startTime >= s.StartTime && startTime < s.EndTime) ||
-                                (endTime > s.StartTime && endTime <= s.EndTime) ||
-                                (startTime <= s.StartTime && endTime >= s.EndTime)));
-        }
-
         public async Task<List<Schedule>> GetSchedulesByProgramIdAsync(int programId)
         {
             return await _context.Schedules
                 .Where(s => s.ProgramID == programId)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .ToListAsync();
         }
+
 
         public async Task<Schedule> CreateScheduleAsync(Schedule schedule)
         {
@@ -65,7 +55,6 @@ namespace DAOs
         {
             var schedule = await _context.Schedules
                 .Include(s => s.Program)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .FirstOrDefaultAsync(s => s.ScheduleID == scheduleId);
 
             if (schedule == null)
@@ -78,7 +67,6 @@ namespace DAOs
         {
             return await _context.Schedules
                 .Include(s => s.Program)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .ToListAsync();
         }
 
@@ -116,7 +104,6 @@ namespace DAOs
             return await _context.Schedules
                 .Where(s => s.Status == "Active" || s.Status == "Ready" || s.Status == "Live")
                 .Include(s => s.Program)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .ToListAsync();
         }
 
@@ -126,7 +113,6 @@ namespace DAOs
                 .Where(s => s.Status == "Live")
                 .Include(s => s.Program)
                     .ThenInclude(p => p.SchoolChannel)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .ToListAsync();
         }
 
@@ -135,7 +121,6 @@ namespace DAOs
             return await _context.Schedules
                 .Where(s => s.Status == "Pending" || s.Status == "Ready")
                 .Include(s => s.Program)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .ToListAsync();
         }
 
@@ -150,7 +135,6 @@ namespace DAOs
                     s.StartTime >= start &&
                     s.StartTime < end)
                 .Include(s => s.Program)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .ToListAsync();
         }
 
@@ -166,25 +150,35 @@ namespace DAOs
 
             return result;
         }
-
         public async Task<List<Schedule>> GetSchedulesByDateAsync(DateTime date)
         {
             return await _context.Schedules
                 .Include(s => s.Program)
                     .ThenInclude(p => p.SchoolChannel)
                 .Where(s => s.StartTime.Date == date.Date)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .ToListAsync();
         }
-
         public async Task<Program?> GetProgramByVideoHistoryIdAsync(int videoHistoryId)
         {
             var video = await _context.VideoHistories
                 .Include(v => v.Program)
-                .AsNoTracking()  // Thêm AsNoTracking() để tránh cache
                 .FirstOrDefaultAsync(v => v.VideoHistoryID == videoHistoryId);
 
             return video?.Program;
         }
+        public async Task<Program?> GetProgramByIdAsync(int programId)
+        {
+            return await _context.Programs.FirstOrDefaultAsync(p => p.ProgramID == programId);
+        }
+
+        public async Task<bool> IsScheduleOverlappingAsync(int schoolChannelId, DateTime startTime, DateTime endTime)
+        {
+            return await _context.Schedules
+                .AnyAsync(s => s.Program.SchoolChannelID == schoolChannelId &&
+                               ((startTime >= s.StartTime && startTime < s.EndTime) ||
+                                (endTime > s.StartTime && endTime <= s.EndTime) ||
+                                (startTime <= s.StartTime && endTime >= s.EndTime)));
+        }
+
     }
 }

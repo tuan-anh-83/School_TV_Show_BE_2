@@ -1,10 +1,6 @@
 ﻿using BOs.Models;
 using DAOs;
 using Net.payOS.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repos
@@ -13,10 +9,11 @@ namespace Repos
     {
         private readonly PaymentDAO _paymentDAO;
 
-        public PaymentRepo(PaymentDAO paymentDAO)
+        public PaymentRepo(string clientId, string apiKey, string checksumKey, string? endpoint = null)
         {
-            _paymentDAO = paymentDAO;
+            _paymentDAO = PaymentDAO.Instance(clientId, apiKey, checksumKey, endpoint);
         }
+
         public async Task<CreatePaymentResult> CreatePaymentAsync(Order order, string returnUrl, string cancelUrl)
         {
             return await _paymentDAO.CreatePaymentAsync(order, returnUrl, cancelUrl);
@@ -31,6 +28,5 @@ namespace Repos
         {
             return await _paymentDAO.UpdatePaymentAsync(payment);
         }
-
     }
 }

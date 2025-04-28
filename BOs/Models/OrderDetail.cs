@@ -17,6 +17,8 @@ namespace BOs.Models
         public decimal Price { get; set; }
         public Order Order { get; set; }
 
+
+        [ForeignKey("PackageID")]  
         public Package Package { get; set; }
     }
 }

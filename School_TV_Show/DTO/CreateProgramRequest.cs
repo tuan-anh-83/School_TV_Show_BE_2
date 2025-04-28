@@ -5,6 +5,9 @@ namespace School_TV_Show.DTO
     public class CreateProgramRequest
     {
         [Required]
+        public int ScheduleID { get; set; }
+
+        [Required]
         public int SchoolChannelID { get; set; }
 
         [Required(ErrorMessage = "Program name is required.")]

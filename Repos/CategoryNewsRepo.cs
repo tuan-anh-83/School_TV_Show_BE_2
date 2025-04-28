@@ -10,16 +10,6 @@ namespace Repos
 {
     public class CategoryNewsRepo : ICategoryNewsRepo
     {
-        public async Task<CategoryNews> AddAsync(CategoryNews categoryNews)
-        {
-            return await CategoryNewsDAO.Instance.AddAsync(categoryNews);
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            return await CategoryNewsDAO.Instance.DeleteAsync(id);
-        }
-
         public async Task<IEnumerable<CategoryNews>> GetAllAsync()
         {
             return await CategoryNewsDAO.Instance.GetAllAsync();
@@ -30,9 +20,19 @@ namespace Repos
             return await CategoryNewsDAO.Instance.GetByIdAsync(id);
         }
 
+        public async Task<CategoryNews> AddAsync(CategoryNews categoryNews)
+        {
+            return await CategoryNewsDAO.Instance.AddAsync(categoryNews);
+        }
+
         public async Task<bool> UpdateAsync(CategoryNews categoryNews)
         {
-            return await CategoryNewsDAO.Instance.UpdateAsync(categoryNews);    
+            return await CategoryNewsDAO.Instance.UpdateAsync(categoryNews);
+        }
+
+        public async Task<bool> DeleteAsync(int categoryNewsId)
+        {
+            return await CategoryNewsDAO.Instance.DeleteAsync(categoryNewsId);
         }
     }
 }

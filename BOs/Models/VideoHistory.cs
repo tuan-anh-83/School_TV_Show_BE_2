@@ -13,7 +13,7 @@ namespace BOs.Models
         public int? ProgramID { get; set; }
         [Required]
         [MaxLength(500)]
-        public string? URL { get; set; }
+        public string URL { get; set; }
         public string? MP4Url { get; set; }
 
         [Required]

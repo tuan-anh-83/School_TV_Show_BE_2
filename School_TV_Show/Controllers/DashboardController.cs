@@ -1,6 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Services;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace School_TV_Show.Controllers
 {
@@ -13,7 +17,7 @@ namespace School_TV_Show.Controllers
         private readonly IVideoLikeService _likeService;
         private readonly IShareService _shareService;
         private readonly ICommentService _commentService;
-        private readonly IVideoHistoryService _videoHistoryService;
+        private readonly IVideoService _videoService;
         private readonly ILogger<DashboardController> _logger;
 
         public DashboardController(
@@ -21,14 +25,14 @@ namespace School_TV_Show.Controllers
             IVideoLikeService likeService,
             IShareService shareService,
             ICommentService commentService,
-            IVideoHistoryService videoHistoryService,
+            IVideoService videoService,
             ILogger<DashboardController> logger)
         {
             _viewService = viewService;
             _likeService = likeService;
             _shareService = shareService;
             _commentService = commentService;
-            _videoHistoryService = videoHistoryService;
+            _videoService = videoService;
             _logger = logger;
         }
 
@@ -39,7 +43,7 @@ namespace School_TV_Show.Controllers
             var totalLikes = await _likeService.GetTotalLikesAsync();
             var totalShares = await _shareService.GetTotalSharesAsync();
             var totalComments = await _commentService.GetAllCommentsAsync();
-            var totalVideos = await _videoHistoryService.GetTotalVideosAsync();
+            var totalVideos = await _videoService.GetTotalVideosAsync();
 
             return Ok(new
             {
@@ -87,7 +91,7 @@ namespace School_TV_Show.Controllers
         {
             try
             {
-                var videoHistories = await _videoHistoryService.GetAllVideoHistoriesAsync();
+                var videoHistories = await _videoService.GetAllVideoHistoriesAsync();
 
                 var summary = videoHistories
                     .Where(v => v.Status && v.Program != null && v.Program.SchoolChannel != null)

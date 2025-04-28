@@ -1,64 +1,38 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using School_TV_Show.DTO;
+using Services;
+using System.Security.Claims;
 using BOs.Models;
 using Services;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 
 namespace School_TV_Show.Controllers
 {
-    [Authorize(Roles = "SchoolOwner,Admin,User")]
     [ApiController]
     [Route("api/[controller]")]
     public class ProgramController : ControllerBase
     {
         private readonly IProgramService _programService;
         private readonly ISchoolChannelService _schoolChannelService;
-        private readonly IPackageService _packageService;
 
-        public ProgramController(
-            IProgramService programService,
-            ISchoolChannelService schoolChannelService,
-            IPackageService packageService
-        )
+        public ProgramController(IProgramService programService, ISchoolChannelService schoolChannelService)
         {
             _programService = programService;
             _schoolChannelService = schoolChannelService;
-            _packageService = packageService;
         }
-
         [HttpGet("with-videos")]
-        public async Task<IActionResult> GetProgramsWithVideos([FromQuery] int? schoolChannelId)
+        public async Task<IActionResult> GetProgramsWithVideos()
         {
             var programs = await _programService.GetProgramsWithVideosAsync();
-
-            if (schoolChannelId.HasValue)
-                programs = programs.Where(p => p.SchoolChannelID == schoolChannelId.Value).ToList();
-
-            return Ok(programs.Select(p => new {
-                p.ProgramID,
-                p.ProgramName,
-                p.Title
-            }));
+            return Ok(programs.Select(p => new { p.ProgramID, p.Title }));
         }
-
 
         [HttpGet("without-videos")]
-        public async Task<IActionResult> GetProgramsWithoutVideos([FromQuery] int? schoolChannelId)
+        public async Task<IActionResult> GetProgramsWithoutVideos()
         {
             var programs = await _programService.GetProgramsWithoutVideosAsync();
-
-            if (schoolChannelId.HasValue)
-                programs = programs.Where(p => p.SchoolChannelID == schoolChannelId.Value).ToList();
-
-            return Ok(programs.Select(p => new {
-                p.ProgramID,
-                p.ProgramName,
-                p.Title
-            }));
+            return Ok(programs.Select(p => new { p.ProgramID, p.Title }));
         }
-
-
 
         [HttpGet("all")]
         public async Task<IActionResult> GetAllPrograms()
@@ -103,20 +77,6 @@ namespace School_TV_Show.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(new ApiResponse(false, "Invalid input", ModelState));
-
-            var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (accountIdClaim == null || !int.TryParse(accountIdClaim.Value, out int accountId))
-                return Unauthorized("Invalid account");
-
-            var currentPackage = await _packageService.GetCurrentPackageAndDurationByAccountIdAsync(accountId);
-
-            if (currentPackage == null)
-                return NotFound("No active package found.");
-
-            var (package, remainingDuration) = currentPackage.Value;
-
-            if (remainingDuration == null || remainingDuration <= 0)
-                return BadRequest("Your package was expired.");
 
             var program = new BOs.Models.Program
             {
@@ -207,10 +167,42 @@ namespace School_TV_Show.Controllers
             return Ok(new ApiResponse(true, "Program found", response));
         }
         [HttpGet("by-channel/{channelId}")]
-        public async Task<ActionResult<IEnumerable<BOs.Models.Program>>> GetByChannelId(int channelId)
+        [Authorize(Roles = "User,SchoolOwner,Admin")]
+        public async Task<IActionResult> GetProgramsByChannel(int channelId)
         {
             var programs = await _programService.GetProgramsByChannelIdAsync(channelId);
-            return Ok(programs);
+
+            var result = programs.Select(p => new ProgramResponse
+            {
+                ProgramID = p.ProgramID,
+                ProgramName = p.ProgramName,
+                Title = p.Title,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                SchoolChannelID = p.SchoolChannelID,
+                SchoolChannel = p.SchoolChannel == null ? null : new SchoolChannelResponse
+                {
+                    SchoolChannelID = p.SchoolChannel.SchoolChannelID,
+                    Name = p.SchoolChannel.Name,
+                    Description = p.SchoolChannel.Description,
+                    Website = p.SchoolChannel.Website,
+                    Email = p.SchoolChannel.Email,
+                    Address = p.SchoolChannel.Address
+                },
+                Schedules = p.Schedules?.Select(s => new ScheduleResponse
+                {
+                    ScheduleID = s.ScheduleID,
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Status = s.Status,
+                    LiveStreamStarted = s.LiveStreamStarted,
+                    LiveStreamEnded = s.LiveStreamEnded,
+                    ProgramID = s.ProgramID
+                }).ToList()
+            });
+
+            return Ok(new ApiResponse(true, "Programs by channel", result));
         }
     }
 }

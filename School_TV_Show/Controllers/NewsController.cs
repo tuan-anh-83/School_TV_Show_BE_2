@@ -14,9 +14,9 @@ namespace School_TV_Show.Controllers
     public class NewsController : ControllerBase
     {
         private readonly INewsService _newsService;
-        private readonly IFollowService _followService;
+        private readonly ISchoolChannelFollowService _followService;
 
-        public NewsController(INewsService newsService, IFollowService followService)
+        public NewsController(INewsService newsService, ISchoolChannelFollowService followService)
         {
             _newsService = newsService;
             _followService = followService;
@@ -186,7 +186,7 @@ namespace School_TV_Show.Controllers
         }
 
 
-        [Authorize(Roles = "User,SchoolOwner,Admin")]
+        [Authorize(Roles = "Admin")]
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<News>>> GetAllNews()
         {

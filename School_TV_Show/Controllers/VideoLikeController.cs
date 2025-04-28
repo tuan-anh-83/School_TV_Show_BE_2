@@ -2,10 +2,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using School_TV_Show.DTO;
 using Services.Hubs;
 using Services;
 using System.Security.Claims;
-using School_TV_Show.DTO;
 
 namespace School_TV_Show.Controllers
 {
@@ -14,13 +14,13 @@ namespace School_TV_Show.Controllers
     public class VideoLikeController : ControllerBase
     {
         private readonly IVideoLikeService _videoLikeService;
-        private readonly IVideoHistoryService _videoService;
+        private readonly IVideoService _videoService;
         private readonly ILogger<VideoLikeController> _logger;
         private readonly IHubContext<LiveStreamHub> _hubContext;
 
         public VideoLikeController(
             IVideoLikeService videoLikeService,
-            IVideoHistoryService videoService,
+            IVideoService videoService,
             ILogger<VideoLikeController> logger,
             IHubContext<LiveStreamHub> hubContext)
         {

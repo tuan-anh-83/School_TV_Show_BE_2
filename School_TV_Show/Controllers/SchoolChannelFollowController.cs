@@ -11,10 +11,10 @@ namespace School_TV_Show.Controllers
     [Authorize(Roles = "User,SchoolOwner,Admin")]
     public class SchoolChannelFollowController : ControllerBase
     {
-        private readonly IFollowService _followService;
+        private readonly ISchoolChannelFollowService _followService;
         private readonly ISchoolChannelService _schoolChannelService;
 
-        public SchoolChannelFollowController(IFollowService followService, ISchoolChannelService schoolChannelService)
+        public SchoolChannelFollowController(ISchoolChannelFollowService followService, ISchoolChannelService schoolChannelService)
         {
             _followService = followService;
             _schoolChannelService = schoolChannelService;
@@ -178,30 +178,6 @@ namespace School_TV_Show.Controllers
         {
             var followedChannels = await _followService.GetAllFollowedSchoolChannelsAsync();
             return Ok(followedChannels);
-        }
-
-        [HttpGet("TotalFollow/{channelId}")]
-        //[Authorize(Roles = "SchoolOwner")]
-        public async Task<IActionResult> GetTotalChanneFollow(int channelId)
-        {
-            try
-            {
-                var schoolChannels = await _followService.GetAllFollowsAsync();
-                if (!schoolChannels.Any())
-                    return NotFound("No school channels follows found .");
-
-                int totalChannelFollower = 0;
-                totalChannelFollower = schoolChannels.Count(_ => _.SchoolChannelID == channelId);
-                return Ok(new
-                {
-                    ChanneId = channelId,
-                    AccountFollow = totalChannelFollower
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, "Internal server error");
-            }
         }
 
     }

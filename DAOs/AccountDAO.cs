@@ -32,7 +32,16 @@ namespace DAOs
             }
         }
 
-        
+
+        public async Task<bool> HardDeleteAccountAsync(int accountId)
+        {
+            var account = await GetAccountByIdAsync(accountId);
+            if (account == null)
+                return false;
+            _context.Accounts.Remove(account);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
         public async Task<Account?> GetAccountByUsernameAsync(string username)
         {
             return await _context.Accounts
@@ -125,7 +134,7 @@ namespace DAOs
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<Account?> Login(string email, string password)
+        public async Task<Account?> LoginAsync(string email, string password)
         {
             var account = await _context.Accounts
                                         .Include(a => a.Role)
@@ -207,11 +216,12 @@ namespace DAOs
                 await _context.SaveChangesAsync();
             }
         }
+
         public async Task<List<Account>> GetAllPendingSchoolOwnerAsync()
         {
             return await _context.Accounts
                 .Include(a => a.Role)
-                .Where(a => a.RoleID == 2 && a.Status.ToLower() == "pending") 
+                .Where(a => EF.Functions.Collate(a.Status, "SQL_Latin1_General_CP1_CI_AS") == "Pending")
                 .ToListAsync();
         }
 

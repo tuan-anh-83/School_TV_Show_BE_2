@@ -1,7 +1,6 @@
 ﻿using BOs.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Repos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Repos;
 
 namespace Services
 {
@@ -41,6 +41,14 @@ namespace Services
             var program = await _repository.GetProgramByIdAsync(stream.ProgramID.Value);
             if (program == null) return false;
 
+            // Check if the SchoolOwner's SchoolChannel has any remaining duration
+            var schoolChannel = await _repository.GetSchoolChannelByProgramIdAsync(program.ProgramID);
+            if (schoolChannel == null || schoolChannel.TotalDuration <= 0)
+            {
+                _logger.LogWarning("Cannot start live stream. The SchoolChannel has no remaining duration.");
+                return false; // Prevent starting the stream if duration is 0
+            }
+
             if (!string.IsNullOrEmpty(program.CloudflareStreamId))
             {
                 var checkUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/live_inputs/{program.CloudflareStreamId}";
@@ -72,15 +80,7 @@ namespace Services
                 meta = new { name = stream.Description },
                 recording = new { mode = "automatic" },
                 mode = "push",
-                playback_policy = new[] { "public" },
-                events = new
-                {
-                    webhook = new
-                    {
-                        url = "https://schooltv.azurewebsites.net/api/livestreams/webhook",
-                        events = new[] { "live_input.connected", "live_input.disconnected" }
-                    }
-                }
+                playback_policy = new[] { "public" }
             };
 
             var jsonPayload = JsonSerializer.Serialize(payload);
@@ -106,6 +106,7 @@ namespace Services
 
             return await _repository.AddVideoHistoryAsync(stream);
         }
+
 
         public async Task<bool> CheckStreamerStartedAsync(string cloudflareStreamId)
         {
@@ -165,6 +166,7 @@ namespace Services
             stream.PlaybackUrl = $"https://customer-{_cloudflareSettings.StreamDomain}.cloudflarestream.com/{recorded.Uid}/iframe";
             stream.Duration = recorded.Duration;
 
+            // Request download URL
             var downloadUrl = $"https://api.cloudflare.com/client/v4/accounts/{_cloudflareSettings.AccountId}/stream/{recorded.Uid}/downloads";
             var startDownload = await _httpClient.PostAsync(downloadUrl, null);
 
@@ -220,10 +222,6 @@ namespace Services
         public async Task<bool> CreateScheduleAsync(Schedule schedule) => await _repository.CreateScheduleAsync(schedule);
         public async Task<IEnumerable<Schedule>> GetSchedulesBySchoolChannelIdAsync(int schoolChannelId) => await _repository.GetSchedulesBySchoolChannelIdAsync(schoolChannelId);
         public async Task<bool> CreateProgramAsync(Program program) => await _repository.CreateProgramAsync(program);
-
-        public async Task<VideoHistory?> GetLiveStreamByCloudflareUIDAsync(string uid) => await _repository.GetVideoHistoryByStreamIdAsync(uid);
-
-        public async Task<bool> UpdateLiveStreamAsync(VideoHistory stream) => await _repository.UpdateVideoHistoryAsync(stream);
 
         #region Cloudflare Models
         private class CloudflareVideoListResponse { public List<CloudflareVideoResult> Result { get; set; } }

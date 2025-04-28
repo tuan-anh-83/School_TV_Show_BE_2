@@ -31,11 +31,6 @@ namespace Repos
             return await NewsDAO.Instance.GetAllNewsAsync(active);
         }
 
-        public async Task<Dictionary<DateTime, int>> GetDailyNewsStatisticsAsync()
-        {
-            return await NewsDAO.Instance.GetDailyNewsStatisticsAsync();
-        }
-
         public async Task<List<News>> GetNewsByChannelIdAsync(int schoolChannelId)
         {
             return await NewsDAO.Instance.GetNewsByChannelIdAsync(schoolChannelId);
@@ -59,6 +54,11 @@ namespace Repos
         public async Task<bool> ValidateSchoolChannelOwnershipAsync(int schoolChannelId, int accountId)
         {
             return await NewsDAO.Instance.ValidateSchoolChannelOwnershipAsync(schoolChannelId, accountId);
+        }
+
+        public async Task<Dictionary<DateTime, int>> GetDailyNewsStatisticsAsync()
+        {
+            return await NewsDAO.Instance.GetDailyNewsStatisticsAsync();
         }
     }
 }

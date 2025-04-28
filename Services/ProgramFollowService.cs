@@ -1,10 +1,10 @@
 ﻿using BOs.Models;
-using Repos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Repos;
 
 namespace Services
 {
@@ -15,11 +15,6 @@ namespace Services
         public ProgramFollowService(IProgramFollowRepo programFollowRepository)
         {
             _programFollowRepository = programFollowRepository;
-        }
-
-        public async Task<List<ProgramFollow>> GetByProgramIdAsync(int programId)
-        {
-            return await _programFollowRepository.GetByProgramIdAsync(programId);
         }
 
         public async Task<List<ProgramFollow>> GetAllAsync()
@@ -123,6 +118,10 @@ namespace Services
 
             await _programFollowRepository.UpdateProgramFollowAsync(follow);
             return follow;
+        }
+        public async Task<List<ProgramFollow>> GetByProgramIdAsync(int programId)
+        {
+            return await _programFollowRepository.GetByProgramIdAsync(programId);
         }
     }
 }

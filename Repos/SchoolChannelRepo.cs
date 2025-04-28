@@ -20,11 +20,6 @@ namespace Repos
             return await SchoolChannelDAO.Instance.DeleteByNameAsync(name);
         }
 
-        public async Task<bool> DoesAccountHaveSchoolChannelAsync(int accountId)
-        {
-            return await SchoolChannelDAO.Instance.DoesAccountHaveSchoolChannelAsync(accountId);
-        }
-
         public async Task<IEnumerable<SchoolChannel>> GetAllActiveAsync()
         {
             return await SchoolChannelDAO.Instance.GetAllActiveAsync();
@@ -40,11 +35,6 @@ namespace Repos
             return await SchoolChannelDAO.Instance.GetByIdAsync(id);
         }
 
-        /*public async Task<SchoolChannel?> GetByNameAsync(string name)
-        {
-            return await SchoolChannelDAO.Instance.GetByNameAsync(name);
-        }*/
-
         public async Task<IEnumerable<SchoolChannel>> SearchAsync(string? keyword, string? address, int? accountId)
         {
             return await SchoolChannelDAO.Instance.SearchAsync(keyword, address, accountId);
@@ -53,6 +43,11 @@ namespace Repos
         public async Task UpdateAsync(SchoolChannel schoolChannel)
         {
             await SchoolChannelDAO.Instance.UpdateAsync(schoolChannel);
+        }
+
+        public async Task<bool> DoesAccountHaveSchoolChannelAsync(int accountId)
+        {
+            return await SchoolChannelDAO.Instance.DoesAccountHaveSchoolChannelAsync((int)accountId);
         }
     }
 }

@@ -1,5 +1,5 @@
 ﻿using BOs.Models;
-using DAOs;
+using DAL.DAO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,164 +10,173 @@ namespace Repos
 {
     public class LiveStreamRepo : ILiveStreamRepo
     {
-        public async Task<bool> AddLikeAsync(VideoLike like)
-        {
-            return await LiveStreamDAO.Instance.AddLikeAsync(like);
-        }
+        private readonly LiveStreamDAO _dao;
 
-        public Task AddScheduleAsync(Schedule schedule)
+        public LiveStreamRepo()
         {
-            return LiveStreamDAO.Instance.AddScheduleAsync(schedule);
+            _dao = LiveStreamDAO.Instance;
         }
-
-        public async Task<bool> AddShareAsync(Share share)
+        public void UpdateSchedule(Schedule schedule)
         {
-            return await LiveStreamDAO.Instance.AddShareAsync(share);
+            _dao.UpdateSchedule(schedule);
         }
-
-        public async Task<bool> AddVideoHistoryAsync(VideoHistory stream)
+        public async Task<AdSchedule?> GetNextAvailableAdAsync()
         {
-            return await LiveStreamDAO.Instance.AddVideoHistoryAsync(stream);
-        }
-
-        public async Task<bool> AddViewAsync(VideoView view)
-        {
-            return await LiveStreamDAO.Instance.AddViewAsync(view);
-        }
-
-        public async Task<bool> CreateProgramAsync(Program program)
-        {
-            return await LiveStreamDAO.Instance.CreateProgramAsync(program);    
-        }
-
-        public async Task<bool> CreateScheduleAsync(Schedule schedule)
-        {
-            return await LiveStreamDAO.Instance.CreateScheduleAsync(schedule);
-        }
-
-        public async Task<IEnumerable<VideoHistory>> GetActiveLiveStreamsAsync()
-        {
-            return await LiveStreamDAO.Instance.GetActiveLiveStreamsAsync();
-        }
-
-        public async Task<List<Schedule>> GetEndingSchedulesAsync(DateTime time)
-        {
-            return await LiveStreamDAO.Instance.GetEndingSchedulesAsync(time);
-        }
-
-        public async Task<int?> GetFallbackAdVideoHistoryIdAsync()
-        {
-            return await LiveStreamDAO.Instance.GetFallbackAdVideoHistoryIdAsync();
+            return await _dao.GetNextAvailableAdAsync();
         }
 
         public async Task<List<Schedule>> GetLateStartCandidatesAsync(DateTime thresholdTime)
         {
-            return await LiveStreamDAO.Instance.GetLateStartCandidatesAsync(thresholdTime);
+            return await _dao.GetLateStartCandidatesAsync(thresholdTime);
         }
 
-        public async Task<List<Schedule>> GetLateStartSchedulesPastEndTimeAsync(DateTime now)
+        public async Task<bool> AddVideoHistoryAsync(VideoHistory stream)
         {
-            return await LiveStreamDAO.Instance.GetLateStartSchedulesPastEndTimeAsync(now);
-        }
-
-        public async Task<List<Schedule>> GetLiveSchedulesAsync()
-        {
-            return await LiveStreamDAO.Instance.GetLiveSchedulesAsync();
-        }
-
-        public async Task<VideoHistory> GetLiveStreamByIdAsync(int id)
-        {
-            return await LiveStreamDAO.Instance.GetLiveStreamByIdAsync(id);
-        }
-
-        public async Task<AdSchedule?> GetNextAvailableAdAsync()
-        {
-            return await LiveStreamDAO.Instance.GetNextAvailableAdAsync();
-        }
-
-        public async Task<List<Schedule>> GetOverdueSchedulesAsync(DateTime currentTime)
-        {
-            return await LiveStreamDAO.Instance.GetOverdueSchedulesAsync(currentTime);
-        }
-
-        public async Task<List<Schedule>> GetPendingSchedulesAsync(DateTime time)
-        {
-            return await LiveStreamDAO.Instance.GetPendingSchedulesAsync(time);
-        }
-
-        public async Task<Program> GetProgramByIdAsync(int id)
-        {
-            return await LiveStreamDAO.Instance.GetProgramByIdAsync(id);
-        }
-
-        public async Task<List<Schedule>> GetReadySchedulesAsync(DateTime time)
-        {
-            return await LiveStreamDAO.Instance.GetReadySchedulesAsync(time);
-        }
-
-        public async Task<VideoHistory> GetRecordedVideoByStreamIdAsync(string streamId)
-        {
-            return await LiveStreamDAO.Instance.GetRecordedVideoByStreamIdAsync(streamId);
-        }
-
-        public async Task<IEnumerable<Schedule>> GetSchedulesBySchoolChannelIdAsync(int schoolChannelId)
-        {
-            return await LiveStreamDAO.Instance.GetSchedulesBySchoolChannelIdAsync(schoolChannelId);
-        }
-
-        public async Task<SchoolChannel?> GetSchoolChannelByIdAsync(int schoolChannelId)
-        {
-            return await LiveStreamDAO.Instance.GetSchoolChannelByIdAsync(schoolChannelId);
-        }
-
-        public async Task<VideoHistory?> GetVideoHistoryByIdAsync(int id)
-        {
-            return await LiveStreamDAO.Instance.GetVideoHistoryByIdAsync(id);  
-        }
-
-        public async Task<VideoHistory?> GetVideoHistoryByProgramIdAsync(int programId)
-        {
-            return await LiveStreamDAO.Instance.GetVideoHistoryByProgramIdAsync(programId);
-        }
-
-        public async Task<VideoHistory> GetVideoHistoryByStreamIdAsync(string cloudflareStreamId)
-        {
-           return await LiveStreamDAO.Instance.GetVideoHistoryByStreamIdAsync(cloudflareStreamId);
-        }
-
-        public Task<VideoHistory?> GetVideoHistoryRecordByProgramIdAsync(int programId)
-        {
-            return LiveStreamDAO.Instance.GetVideoHistoryRecordByProgramIdAsync(programId);
-        }
-
-        public async Task<List<Schedule>> GetWaitingToStartStreamsAsync()
-        {
-            return await LiveStreamDAO.Instance.GetWaitingToStartStreamsAsync();
-        }
-
-        public async Task SaveChangesAsync()
-        {
-            await LiveStreamDAO.Instance.SaveChangesAsync();
-        }
-
-        public Task UpdateAsync(Schedule schedule)
-        {
-            return LiveStreamDAO.Instance.UpdateAsync(schedule);    
-        }
-
-        public async Task<bool> UpdateProgramAsync(Program program)
-        {
-            return await LiveStreamDAO.Instance.UpdateProgramAsync(program);
-        }
-
-        public void UpdateSchedule(Schedule schedule)
-        {
-            LiveStreamDAO.Instance.UpdateSchedule(schedule);
+            return await _dao.AddVideoHistoryAsync(stream);
         }
 
         public async Task<bool> UpdateVideoHistoryAsync(VideoHistory stream)
         {
-            return await LiveStreamDAO.Instance.UpdateVideoHistoryAsync(stream);
+            return await _dao.UpdateVideoHistoryAsync(stream);
         }
+        public async Task<List<Schedule>> GetWaitingToStartStreamsAsync()
+        {
+            return await _dao.GetWaitingToStartStreamsAsync();
+        }
+
+        public async Task<Program> GetProgramByIdAsync(int id)
+        {
+            return await _dao.GetProgramByIdAsync(id);
+        }
+
+        public async Task<bool> UpdateProgramAsync(Program program)
+        {
+            return await _dao.UpdateProgramAsync(program);
+        }
+
+        public async Task<bool> AddLikeAsync(VideoLike like)
+        {
+            return await _dao.AddLikeAsync(like);
+        }
+
+        public async Task<bool> AddViewAsync(VideoView view)
+        {
+            return await _dao.AddViewAsync(view);
+        }
+
+        public async Task<bool> AddShareAsync(Share share)
+        {
+            return await _dao.AddShareAsync(share);
+        }
+
+        public async Task<IEnumerable<Schedule>> GetSchedulesBySchoolChannelIdAsync(int schoolChannelId)
+        {
+            return await _dao.GetSchedulesBySchoolChannelIdAsync(schoolChannelId);
+        }
+
+        public async Task<VideoHistory> GetVideoHistoryByStreamIdAsync(string cloudflareStreamId)
+        {
+            return await _dao.GetVideoHistoryByStreamIdAsync(cloudflareStreamId);
+        }
+
+        public async Task<VideoHistory> GetLiveStreamByIdAsync(int id)
+        {
+            return await _dao.GetLiveStreamByIdAsync(id);
+        }
+
+        public async Task<IEnumerable<VideoHistory>> GetActiveLiveStreamsAsync()
+        {
+            return await _dao.GetActiveLiveStreamsAsync();
+        }
+
+        public async Task<bool> CreateScheduleAsync(Schedule schedule)
+        {
+            return await _dao.CreateScheduleAsync(schedule);
+        }
+
+        public async Task<bool> CreateProgramAsync(Program program)
+        {
+            return await _dao.CreateProgramAsync(program);
+        }
+
+        public async Task<List<Schedule>> GetPendingSchedulesAsync(DateTime time)
+        {
+            return await _dao.GetPendingSchedulesAsync(time);
+        }
+
+        public async Task<List<Schedule>> GetReadySchedulesAsync(DateTime time)
+        {
+            return await _dao.GetReadySchedulesAsync(time);
+        }
+
+        public async Task<List<Schedule>> GetEndingSchedulesAsync(DateTime time)
+        {
+            return await _dao.GetEndingSchedulesAsync(time);
+        }
+
+        public async Task<VideoHistory?> GetVideoHistoryByIdAsync(int id)
+        {
+            return await _dao.GetVideoHistoryByIdAsync(id);
+        }
+
+        public async Task<int?> GetFallbackAdVideoHistoryIdAsync()
+        {
+            return await _dao.GetFallbackAdVideoHistoryIdAsync();
+        }
+
+        public async Task AddScheduleAsync(Schedule schedule)
+        {
+            await _dao.AddScheduleAsync(schedule);
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            await _dao.SaveChangesAsync();
+        }
+
+        public async Task<VideoHistory> GetRecordedVideoByStreamIdAsync(string streamId)
+        {
+            return await _dao.GetRecordedVideoByStreamIdAsync(streamId);
+        }
+
+        public async Task<List<Schedule>> GetLiveSchedulesAsync()
+        {
+            return await _dao.GetLiveSchedulesAsync();
+        }
+        public async Task<List<Schedule>> GetOverdueSchedulesAsync(DateTime currentTime)
+        {
+            return await _dao.GetOverdueSchedulesAsync(currentTime);
+        }
+
+        public async Task<List<Schedule>> GetLateStartSchedulesPastEndTimeAsync(DateTime now)
+        {
+            return await _dao.GetLateStartCandidatesAsync(now);
+        }
+
+        public async Task AddSchedule(Schedule schedule)
+        {
+            await _dao.AddScheduleAsync(schedule);
+        }
+        public async Task UpdateAsync(Schedule schedule) 
+        {
+            await _dao.UpdateAsync(schedule);
+        }
+        public async Task<VideoHistory?> GetVideoHistoryByProgramIdAsync(int programId)
+        {
+            return await _dao.GetVideoHistoryByProgramIdAsync(programId);
+        }
+        public async Task<List<VideoHistory>> GetExpiredUploadedVideosAsync(DateTime currentTime)
+        {
+            return await _dao.GetExpiredUploadedVideosAsync(currentTime);
+        }
+        public async Task<SchoolChannel?> GetSchoolChannelByIdAsync(int schoolChannelId)
+        {
+            return await _dao.GetSchoolChannelByIdAsync(schoolChannelId);
+        }
+        public async Task<SchoolChannel?> GetSchoolChannelByProgramIdAsync(int programId)
+        {
+            return await _dao.GetSchoolChannelByProgramIdAsync(programId);
+        }
+
     }
 }

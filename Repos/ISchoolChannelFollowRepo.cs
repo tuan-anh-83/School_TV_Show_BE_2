@@ -19,5 +19,6 @@ namespace Repos
         Task<List<object>> GetAllFollowedSchoolChannelsAsync();
         Task<List<SchoolChannelFollow>> GetFollowersByChannelIdAsync(int channelId);
         Task<List<SchoolChannelFollow>> GetFollowersBySchoolChannelIdAsync(int schoolChannelId);
+
     }
 }

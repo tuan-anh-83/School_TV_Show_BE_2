@@ -10,30 +10,31 @@ namespace Services
 {
     public class PaymentHistoryService : IPaymentHistoryService
     {
-        private readonly IPaymentHistoryRepo _repo;
-        public PaymentHistoryService(IPaymentHistoryRepo repo)
+        private readonly IPaymentHistoryRepo _paymentHistoryRepo;
+
+        public PaymentHistoryService(IPaymentHistoryRepo paymentHistoryRepo)
         {
-            _repo = repo;
+            _paymentHistoryRepo = paymentHistoryRepo;
         }
 
-        public Task AddPaymentHistoryAsync(Payment payment)
+        public async Task AddPaymentHistoryAsync(Payment payment)
         {
-            return _repo.AddPaymentHistoryAsync(payment);
-        }
-
-        public async Task<List<PaymentHistory>> GetAllPaymentHistoriesAsync()
-        {
-            return await _repo.GetAllPaymentHistoriesAsync();
+            await _paymentHistoryRepo.AddPaymentHistoryAsync(payment);
         }
 
         public async Task<List<PaymentHistory>> GetPaymentHistoriesByPaymentIdAsync(int paymentId)
         {
-            return await _repo.GetPaymentHistoriesByPaymentIdAsync(paymentId);
+            return await _paymentHistoryRepo.GetPaymentHistoriesByPaymentIdAsync(paymentId);
+        }
+
+        public async Task<List<PaymentHistory>> GetAllPaymentHistoriesAsync()
+        {
+            return await _paymentHistoryRepo.GetAllPaymentHistoriesAsync();
         }
 
         public async Task<List<PaymentHistory>> GetPaymentHistoriesByUserIdAsync(int userId)
         {
-            return await _repo.GetPaymentHistoriesByPaymentIdAsync(userId);
+            return await _paymentHistoryRepo.GetPaymentHistoriesByUserIdAsync(userId);
         }
     }
 }

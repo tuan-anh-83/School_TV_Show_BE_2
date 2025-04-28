@@ -11,9 +11,9 @@ namespace Services
     public class PackageService : IPackageService
     {
         private readonly IPackageRepo _packageRepo;
-
         public PackageService(IPackageRepo packageRepo)
         {
+
             _packageRepo = packageRepo;
         }
 
@@ -53,15 +53,10 @@ namespace Services
         {
             return await _packageRepo.GetTopPurchasedPackagesAsync();
         }
-
-        public async Task<(Package?, double?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId)
+        public async Task<(Package?, int?)?> GetCurrentPackageAndDurationByAccountIdAsync(int accountId)
         {
             return await _packageRepo.GetCurrentPackageAndDurationByAccountIdAsync(accountId);
         }
 
-        public async Task<AccountPackage?> GetCurrentPackageAndDurationByProgramIdAsync(int programId)
-        {
-            return await _packageRepo.GetCurrentPackageAndDurationByProgramIdAsync(programId);
-        }
     }
 }

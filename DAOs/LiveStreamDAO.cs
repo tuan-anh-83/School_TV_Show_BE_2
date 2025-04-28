@@ -1,17 +1,16 @@
-﻿using BOs.Data;
-using BOs.Models;
+﻿using BOs.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using BOs.Data;
 
-namespace DAOs
+namespace DAL.DAO
 {
     public class LiveStreamDAO
     {
-        private static LiveStreamDAO instance = null;
+        private static LiveStreamDAO? instance = null;
         private readonly DataContext _context;
 
         private LiveStreamDAO()
@@ -29,22 +28,6 @@ namespace DAOs
                 }
                 return instance;
             }
-        }
-
-        public async Task<SchoolChannel?> GetSchoolChannelByIdAsync(int schoolChannelId)
-        {
-            return await _context.SchoolChannels.FirstOrDefaultAsync(s => s.SchoolChannelID == schoolChannelId);
-        }
-        public async Task<List<VideoHistory>> GetExpiredUploadedVideosAsync(DateTime currentTime)
-        {
-            return await _context.VideoHistories
-                .Where(v =>
-                    v.Type != "Live" &&
-                    v.Status == true &&
-                    v.StreamAt.HasValue &&
-                    v.Duration.HasValue &&
-                    v.StreamAt.Value.AddMinutes(v.Duration.Value) <= currentTime)
-                .ToListAsync();
         }
 
         public async Task<bool> AddVideoHistoryAsync(VideoHistory stream)
@@ -132,12 +115,6 @@ namespace DAOs
                 .OrderByDescending(v => v.CreatedAt)
                 .FirstOrDefaultAsync(v => v.ProgramID == programId && v.Type == "Live");
         }
-        public async Task<VideoHistory?> GetVideoHistoryRecordByProgramIdAsync(int programId)
-        {
-            return await _context.VideoHistories
-                .OrderByDescending(v => v.CreatedAt)
-                .FirstOrDefaultAsync(v => v.ProgramID == programId && v.Type == "Record");
-        }
 
         public async Task<IEnumerable<VideoHistory>> GetActiveLiveStreamsAsync()
         {
@@ -149,12 +126,10 @@ namespace DAOs
 
         public async Task<bool> CreateScheduleAsync(Schedule schedule)
         {
-            Console.WriteLine($"[LiveStreamRepository] Creating schedule for ProgramID={schedule.ProgramID}, " +
-                              $"IsReplay={schedule.IsReplay}, VideoHistoryID={schedule.VideoHistoryID}");
-
             _context.Schedules.Add(schedule);
             return await _context.SaveChangesAsync() > 0;
         }
+
         public async Task<bool> CreateProgramAsync(Program program)
         {
             _context.Programs.Add(program);
@@ -263,5 +238,30 @@ namespace DAOs
             _context.Schedules.Update(schedule);
             await Task.CompletedTask;
         }
+        public async Task<List<VideoHistory>> GetExpiredUploadedVideosAsync(DateTime currentTime)
+        {
+            return await _context.VideoHistories
+                .Where(v =>
+                    v.Type != "Live" &&
+                    v.Status == true &&
+                    v.StreamAt.HasValue &&
+                    v.Duration.HasValue &&
+                    v.StreamAt.Value.AddMinutes(v.Duration.Value) <= currentTime)
+                .ToListAsync();
+        }
+
+        public async Task<SchoolChannel?> GetSchoolChannelByIdAsync(int schoolChannelId)
+        {
+            return await _context.SchoolChannels.FirstOrDefaultAsync(s => s.SchoolChannelID == schoolChannelId);
+        }
+        public async Task<SchoolChannel?> GetSchoolChannelByProgramIdAsync(int programId)
+        {
+            var program = await _context.Programs
+                .Include(p => p.SchoolChannel)
+                .FirstOrDefaultAsync(p => p.ProgramID == programId);
+
+            return program?.SchoolChannel;
+        }
+
     }
 }

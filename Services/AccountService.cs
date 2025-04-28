@@ -12,98 +12,53 @@ namespace Services
 {
     public class AccountService : IAccountService
     {
-        private readonly IAccountRepo _accountRepo;
+        private readonly IAccountRepo _accRepo;
         private readonly IDistributedCache _cache;
 
-        public AccountService(IAccountRepo accountRepo, IDistributedCache cache)
+        public AccountService(IAccountRepo accRepo, IDistributedCache cache)
         {
-            _accountRepo = accountRepo;
+            _accRepo = accRepo;
             _cache = cache;
         }
 
-        public async Task<bool> AssignRoleAsync(int accountId, int roleId)
-        {
-            return await _accountRepo.AssignRoleAsync(accountId, roleId);
-        }
+        public Task<bool> HardDeleteAccountAsync(int accountId) => _accRepo.HardDeleteAccountAsync(accountId);
 
-        public async Task<bool> DeleteAccountAsync(int accountId)
-        {
-            return await _accountRepo.DeleteAccountAsync(accountId);
-        }
+        public Task<Account?> GetAccountByUsernameAsync(string username) => _accRepo.GetAccountByUsernameAsync(username);
 
-        public async Task<Account?> GetAccountByEmailAsync(string email)
-        {
-            return await _accountRepo.GetAccountByEmailAsync(email);
-        }
+        public Task<Account?> GetAccountByEmailAsync(string email) => _accRepo.GetAccountByEmailAsync(email);
 
-        public async Task<Account?> GetAccountByIdAsync(int accountId)
-        {
-            return await _accountRepo.GetAccountByIdAsync(accountId);
-        }
+        public Task<Role?> GetRoleByIdAsync(int roleId) => _accRepo.GetRoleByIdAsync(roleId);
 
-        public async Task<Account?> GetAccountByUsernameAsync(string username)
-        {
-            return await _accountRepo.GetAccountByUsernameAsync(username);
-        }
+        public Task<List<Account>> GetAllAccountsAsync() => _accRepo.GetAllAccountsAsync();
 
-        public async Task<List<Account>> GetAllAccountsAsync()
-        {
-            return await _accountRepo.GetAllAccountsAsync();
-        }
+        public Task<Account?> GetAccountByIdAsync(int accountId) => _accRepo.GetAccountByIdAsync(accountId);
 
-        public async Task<List<Account>> GetAllPendingSchoolOwnerAsync()
-        {
-            return await _accountRepo.GetAllPendingSchoolOwnerAsync();
-        }
+        public Task<bool> DeleteAccountAsync(int accountId) => _accRepo.DeleteAccountAsync(accountId);
 
-        public async Task<OtpInfo> GetCurrentOtpAsync(string email)
-        {
-            var otpJson = await _cache.GetStringAsync(GetOtpCacheKey(email));
-            if (string.IsNullOrEmpty(otpJson))
-                return null;
-            return JsonSerializer.Deserialize<OtpInfo>(otpJson);
-        }
+        public Task<bool> SignUpAsync(Account account) => _accRepo.SignUpAsync(account);
 
-        private string GetOtpCacheKey(string email)
-        {
-            return $"OTP_{email}";
-        }
+        public Task<bool> UpdateAccountAsync(Account account) => _accRepo.UpdateAccountAsync(account);
 
-        public async Task<List<Account>> GetPendingAccountsAsync(DateTime threshold)
-        {
-            return await _accountRepo.GetPendingAccountsOlderThanAsync(threshold);
-        }
+        public Task<Account?> LoginAsync(string email, string password) => _accRepo.LoginAsync(email, password);
 
-        public async Task<Role?> GetRoleByIdAsync(int roleId)
-        {
-            return await _accountRepo.GetRoleByIdAsync(roleId);
-        }
+        public Task<Account?> SearchAccountByIdAsync(int accountId) => _accRepo.SearchAccountByIdAsync(accountId);
 
-        public async Task<int> GetSchoolOwnerCountAsync()
-        {
-            return await _accountRepo.GetSchoolOwnerCountAsync();
-        }
+        public Task<List<Account>> SearchAccountsByNameAsync(string searchTerm) => _accRepo.SearchAccountsByNameAsync(searchTerm);
 
-        public async Task<int> GetUserCountAsync()
-        {
-            return await _accountRepo.GetUserCountAsync();
-        }
+        public Task<bool> AssignRoleAsync(int accountId, int roleId) => _accRepo.AssignRoleAsync(accountId, roleId);
 
-        public async Task InvalidateOtpAsync(string email)
-        {
-            await _cache.RemoveAsync(GetOtpCacheKey(email));
+        public Task<bool> UpdateAccountStatusAsync(int accountId, string status) => _accRepo.UpdateAccountStatusAsync(accountId, status);
 
-        }
+        public Task SavePasswordResetTokenAsync(int accountId, string token, DateTime expiration)
+            => _accRepo.SavePasswordResetTokenAsync(accountId, token, expiration);
+
+        public Task<bool> VerifyPasswordResetTokenAsync(int accountId, string token)
+            => _accRepo.VerifyPasswordResetTokenAsync(accountId, token);
 
         public Task InvalidatePasswordResetTokenAsync(int accountId, string token)
-        {
-            return _accountRepo.InvalidatePasswordResetTokenAsync(accountId, token);
-        }
+            => _accRepo.InvalidatePasswordResetTokenAsync(accountId, token);
 
-        public async Task<Account> Login(string email, string password)
-        {
-            return await _accountRepo.Login(email, password);
-        }
+        public Task<List<Account>> GetAllPendingSchoolOwnerAsync() => _accRepo.GetAllPendingSchoolOwnerAsync();
 
         public async Task<bool> SaveOtpAsync(string email, string otp, DateTime expiration)
         {
@@ -130,36 +85,6 @@ namespace Services
             }
         }
 
-        public Task SavePasswordResetTokenAsync(int accountId, string token, DateTime expiration)
-        {
-            return _accountRepo.SavePasswordResetTokenAsync(accountId, token, expiration);
-        }
-
-        public async Task<Account?> SearchAccountByIdAsync(int accountId)
-        {
-            return await _accountRepo.SearchAccountByIdAsync(accountId);
-        }
-
-        public async Task<List<Account>> SearchAccountsByNameAsync(string searchTerm)
-        {
-            return await _accountRepo.SearchAccountsByNameAsync(searchTerm);
-        }
-
-        public async Task<bool> SignUpAsync(Account account)
-        {
-            return await _accountRepo.SignUpAsync(account);
-        }
-
-        public Task<bool> UpdateAccountAsync(Account account)
-        {
-            return _accountRepo.UpdateAccountAsync(account);
-        }
-
-        public async Task<bool> UpdateAccountStatusAsync(int accountId, string status)
-        {
-            return await _accountRepo.UpdateAccountStatusAsync(accountId, status);
-        }
-
         public async Task<bool> VerifyOtpAsync(string email, string otp)
         {
             var otpJson = await _cache.GetStringAsync(GetOtpCacheKey(email));
@@ -169,9 +94,37 @@ namespace Services
             return otpInfo != null && otpInfo.Code == otp;
         }
 
-        public async Task<bool> VerifyPasswordResetTokenAsync(int accountId, string token)
+        public async Task InvalidateOtpAsync(string email)
         {
-            return await _accountRepo.VerifyPasswordResetTokenAsync(accountId, token);
+            await _cache.RemoveAsync(GetOtpCacheKey(email));
+        }
+
+        public async Task<OtpInfo> GetCurrentOtpAsync(string email)
+        {
+            var otpJson = await _cache.GetStringAsync(GetOtpCacheKey(email));
+            if (string.IsNullOrEmpty(otpJson))
+                return null;
+            return JsonSerializer.Deserialize<OtpInfo>(otpJson);
+        }
+
+        private string GetOtpCacheKey(string email)
+        {
+            return $"OTP_{email}";
+        }
+
+        public Task<int> GetUserCountAsync()
+        {
+            return _accRepo.GetUserCountAsync();
+        }
+
+        public Task<int> GetSchoolOwnerCountAsync()
+        {
+            return _accRepo.GetSchoolOwnerCountAsync();
+        }
+
+        public async Task<List<Account>> GetPendingAccountsAsync(DateTime threshold)
+        {
+            return await _accRepo.GetPendingAccountsOlderThanAsync(threshold);
         }
     }
 }

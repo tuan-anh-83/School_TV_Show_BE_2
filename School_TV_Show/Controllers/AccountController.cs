@@ -85,6 +85,7 @@ namespace School_TV_Show.Controllers
                 }
             });
         }
+
         [HttpPost("schoolowner/signup")]
         public async Task<IActionResult> SchoolOwnerSignUp([FromBody] SchoolOwnerSignUpRequestDTO request)
         {
@@ -373,7 +374,7 @@ namespace School_TV_Show.Controllers
                                               .ToList();
                 return BadRequest(new { errors });
             }
-            var account = await _accountService.Login(loginRequest.Email, loginRequest.Password);
+            var account = await _accountService.LoginAsync(loginRequest.Email, loginRequest.Password);
             if (account == null || !account.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
                 return Unauthorized("Invalid login information or account is inactive.");
             if (account.RoleID == 0)
@@ -435,7 +436,7 @@ namespace School_TV_Show.Controllers
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(googleId))
                 return BadRequest("Necessary claims not received from Google.");
 
-            var account = await _accountService.Login(email, string.Empty);
+            var account = await _accountService.LoginAsync(email, string.Empty);
             if (account != null)
             {
                 if (string.IsNullOrEmpty(account.ExternalProvider))
@@ -719,12 +720,52 @@ namespace School_TV_Show.Controllers
             return account != null ? Ok(account) : NotFound("Account not found.");
         }
 
+        [NonAction]
+        private int? GetAuthenticatedUserId()
+        {
+            var accountIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (accountIdClaim == null || !int.TryParse(accountIdClaim.Value, out int accountId))
+            {
+                return null;
+            }
+            return accountId;
+        }
+
         [Authorize(Roles = "Admin")]
         [HttpDelete("admin/delete/{id}")]
         public async Task<IActionResult> DeleteAccount(int id)
         {
+            // Lấy thông tin của tài khoản hiện tại (admin)
+            var currentAccountId = GetAuthenticatedUserId();
+            if (currentAccountId == null)
+                return Unauthorized("User is not authenticated.");
+
+            var currentAccount = await _accountService.GetAccountByIdAsync(currentAccountId.Value);
+            if (currentAccount == null)
+                return NotFound("Account not found.");
+
+            // Kiểm tra nếu tài khoản hiện tại là admin
+            if (currentAccount.RoleID != 3) // RoleID = 3 là admin
+                return Unauthorized("You are not authorized to delete accounts.");
+
+            // Lấy thông tin tài khoản cần xóa
+            var targetAccount = await _accountService.GetAccountByIdAsync(id);
+            if (targetAccount == null)
+                return NotFound("Account not found.");
+
+            // Kiểm tra nếu tài khoản cần xóa cũng là admin
+            if (targetAccount.RoleID == 3)  // Nếu tài khoản cần xóa là admin
+            {
+                // Nếu tài khoản cần xóa là admin, chỉ cho phép xóa nếu accountId của admin hiện tại == accountId của admin cần xóa
+                if (currentAccount.AccountID != targetAccount.AccountID)
+                {
+                    return BadRequest("You cannot delete another admin account.");
+                }
+            }
+
+            // Tiến hành xóa tài khoản nếu điều kiện trên không xảy ra
             bool result = await _accountService.DeleteAccountAsync(id);
-            return result ? Ok("Account deleted successfully.") : NotFound("Account not found.");
+            return result ? Ok("Account deleted successfully.") : StatusCode(500, "Account deletion failed.");
         }
 
         [Authorize(Roles = "Admin")]

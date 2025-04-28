@@ -12,11 +12,11 @@ namespace DAOs
     public class NewsDAO
     {
         private static NewsDAO instance = null;
-        private readonly DataContext _context;
+        private readonly DataContext context;
 
         private NewsDAO()
         {
-            _context = new DataContext();
+            context = new DataContext();
         }
 
         public static NewsDAO Instance
@@ -33,22 +33,22 @@ namespace DAOs
 
         public async Task<int> CreateNewsAsync(News news, List<NewsPicture> pictures)
         {
-            var strategy = _context.Database.CreateExecutionStrategy();
+            var strategy = context.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                using var transaction = await context.Database.BeginTransactionAsync();
                 try
                 {
-                    _context.News.Add(news);
-                    await _context.SaveChangesAsync();
+                    context.News.Add(news);
+                    await context.SaveChangesAsync();
 
                     foreach (var picture in pictures)
                     {
                         picture.NewsID = news.NewsID;
-                        _context.NewsPictures.Add(picture);
+                        context.NewsPictures.Add(picture);
                     }
 
-                    await _context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
                     await transaction.CommitAsync();
                     return news.NewsID;
                 }
@@ -63,13 +63,13 @@ namespace DAOs
 
         public async Task<int> UpdateNewsAsync(News news, List<NewsPicture> pictures)
         {
-            var strategy = _context.Database.CreateExecutionStrategy();
+            var strategy = context.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                using var transaction = await context.Database.BeginTransactionAsync();
                 try
                 {
-                    var existingNews = await _context.News
+                    var existingNews = await context.News
                         .Include(n => n.NewsPictures)
                         .FirstOrDefaultAsync(n => n.NewsID == news.NewsID);
 
@@ -86,15 +86,15 @@ namespace DAOs
 
                     if (pictures != null && pictures.Count > 0)
                     {
-                        _context.NewsPictures.RemoveRange(existingNews.NewsPictures);
+                        context.NewsPictures.RemoveRange(existingNews.NewsPictures);
                         foreach (var picture in pictures)
                         {
                             picture.NewsID = news.NewsID;
-                            _context.NewsPictures.Add(picture);
+                            context.NewsPictures.Add(picture);
                         }
                     }
 
-                    await _context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
                     await transaction.CommitAsync();
                     return existingNews.NewsID;
                 }
@@ -106,23 +106,22 @@ namespace DAOs
             });
         }
 
-
         public async Task<bool> ValidateSchoolChannelOwnershipAsync(int schoolChannelId, int accountId)
         {
-            return await _context.SchoolChannels
+            return await context.SchoolChannels
                 .AnyAsync(sc => sc.SchoolChannelID == schoolChannelId && sc.AccountID == accountId);
         }
 
         public async Task<List<News>> GetNewsByChannelIdAsync(int schoolChannelId)
         {
-            return await _context.News
+            return await context.News
                 .Where(n => n.SchoolChannelID == schoolChannelId && n.Status)
                 .ToListAsync();
         }
 
         public async Task<News> GetNewsByIdAsync(int id)
         {
-            return await _context.News
+            return await context.News
                 .Include(n => n.NewsPictures)
                 .Include(n => n.SchoolChannel)
                 .FirstOrDefaultAsync(n => n.NewsID == id && n.Status);
@@ -130,18 +129,18 @@ namespace DAOs
 
         public async Task<bool> DeleteNewsAsync(int id)
         {
-            var news = await _context.News.FindAsync(id);
+            var news = await context.News.FindAsync(id);
             if (news == null) return false;
 
             news.Status = false;
             news.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
 
         public async Task<IEnumerable<News>> GetAllNewsAsync(bool? active)
         {
-            var query = _context.News
+            var query = context.News
                 .Include(n => n.NewsPictures)
                 .Include(n => n.SchoolChannel)
                 .AsQueryable();
@@ -151,9 +150,10 @@ namespace DAOs
 
             return await query.ToListAsync();
         }
+
         public async Task<IEnumerable<News>> GetNewsBySchoolChannelAsync(int schoolChannelId, int? accountId, bool isFollowing)
         {
-            var query = _context.News
+            var query = context.News
                 .Include(n => n.NewsPictures)
                 .Include(n => n.SchoolChannel)
                 .Where(n => n.SchoolChannelID == schoolChannelId && n.Status == true)
@@ -165,7 +165,7 @@ namespace DAOs
         }
         public async Task<IEnumerable<News>> GetActiveNewsWithFollowCheckAndWithoutFollowingAsync(int? accountId)
         {
-            var query = _context.News
+            var query = context.News
                 .Include(n => n.NewsPictures)
                 .Include(n => n.SchoolChannel)
                 .Where(n => n.Status)
@@ -173,7 +173,7 @@ namespace DAOs
 
             if (accountId != null)
             {
-                var followedChannels = _context.Follows
+                var followedChannels = context.Follows
                     .Where(f => f.AccountID == accountId && f.Status == "Followed")
                     .Select(f => f.SchoolChannelID);
 
@@ -186,15 +186,13 @@ namespace DAOs
 
             return await query.ToListAsync();
         }
-
         public async Task<Dictionary<DateTime, int>> GetDailyNewsStatisticsAsync()
         {
-            return await _context.News
+            return await context.News
                 .Where(n => n.Status)
                 .GroupBy(n => n.CreatedAt.Date)
                 .Select(g => new { Date = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.Date, g => g.Count);
         }
-
     }
 }

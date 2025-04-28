@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using School_TV_Show.DTO;
 using Services;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace School_TV_Show.Controllers
 {
@@ -21,7 +24,7 @@ namespace School_TV_Show.Controllers
         {
             var ads = await _service.GetAllAdSchedulesAsync();
 
-            var response = ads.Select(ad => new AdScheduleResponseDTO
+            var response = ads.Select(ad => new AdScheduleResponse
             {
                 AdScheduleID = ad.AdScheduleID,
                 Title = ad.Title,
@@ -34,7 +37,6 @@ namespace School_TV_Show.Controllers
             return Ok(new ApiResponse(true, "List of ad schedules", response));
         }
 
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -46,7 +48,7 @@ namespace School_TV_Show.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateAdScheduleRequestDTO request)
+        public async Task<IActionResult> Create([FromBody] CreateAdScheduleRequest request)
         {
             var ad = new AdSchedule
             {
@@ -54,7 +56,6 @@ namespace School_TV_Show.Controllers
                 StartTime = request.StartTime,
                 EndTime = request.EndTime,
                 VideoUrl = request.VideoUrl,
-
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -66,7 +67,7 @@ namespace School_TV_Show.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateAdScheduleRequestDTO request)
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateAdScheduleRequest request)
         {
             var existing = await _service.GetAdScheduleByIdAsync(id);
             if (existing == null)

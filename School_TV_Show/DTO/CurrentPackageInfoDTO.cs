@@ -5,8 +5,7 @@
         public int PackageID { get; set; }
         public string PackageName { get; set; }
         public int Duration { get; set; }
-        public int TimeDuration { get; set; }
         public decimal Price { get; set; }
-        public double? RemainingDuration { get; set; }
+        public int? RemainingDuration { get; set; }
     }
 }

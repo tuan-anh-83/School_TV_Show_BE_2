@@ -95,6 +95,7 @@ namespace Services
         {
             return await _newsRepo.GetNewsBySchoolChannelAsync(schoolChannelId, accountId, isFollowing);
         }
+
         public async Task<IEnumerable<News>> GetActiveNewsWithFollowCheckAndWithoutFollowingAsync(int? accountId)
         {
             return await _newsRepo.GetActiveNewsWithFollowCheckAndWithoutFollowingAsync(accountId);
@@ -104,7 +105,5 @@ namespace Services
         {
             return await _newsRepo.GetDailyNewsStatisticsAsync();
         }
-
-
     }
 }

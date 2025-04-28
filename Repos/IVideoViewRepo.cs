@@ -15,7 +15,6 @@ namespace Repos
         Task<bool> UpdateVideoViewAsync(VideoView videoView);
         Task<bool> DeleteVideoViewAsync(int videoViewId);
         Task<int> GetTotalViewsForVideoAsync(int videoHistoryId);
-
         Task<int> CountTotalViewsAsync();
         Task<Dictionary<int, int>> GetViewsCountPerVideoAsync();
     }
